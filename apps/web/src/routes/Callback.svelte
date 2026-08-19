@@ -1,30 +1,26 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { setTokens } from "../lib/auth";
+  import { api } from "../lib/api";
+  import { getCurrentUser, invalidateAuthCache } from "../lib/auth";
   import Wordmark from "../lib/ui/Wordmark.svelte";
 
   let error = $state<string | null>(null);
 
-  onMount(() => {
-    const hash = window.location.hash ?? "";
-    // Soporta dos formatos:
-    //   Nuevo: #access=<jwt>&refresh=<jwt>&exp=<unix>
-    //   Legacy: #token=<jwt>   (sólo access, sin refresh — se aceptará hasta expirar)
-    const params = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
-    const access = params.get("access") ?? params.get("token");
-    const refresh = params.get("refresh") ?? null;
-    const expStr = params.get("exp");
-    if (!access) {
-      error = "No se recibieron tokens en el callback.";
+  onMount(async () => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (!code) {
+      error = "No se recibió code en el callback.";
       return;
     }
     try {
-      const exp = expStr ? parseInt(expStr, 10) : Math.floor(Date.now() / 1000) + 3600;
-      setTokens({ access, refresh: refresh ?? undefined, exp });
+      await api.exchange(code);
+      invalidateAuthCache();
+      await getCurrentUser(); // prefill
       history.replaceState(null, "", "/");
       window.location.href = "/";
-    } catch {
-      error = "Tokens inválidos";
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Exchange failed";
     }
   });
 </script>

@@ -1,79 +1,70 @@
-// Tokens de sesión en localStorage. Dura el access (1h) y el refresh (30d).
-// El cliente nunca debería tocar el JWT crudo — sólo los helpers.
+// Sesión manejada 100% server-side vía cookie httpOnly. La SPA no toca
+// tokens: pregunta al backend si hay sesión via /api/me y llama /auth/logout
+// para terminar.
 
-const ACCESS_KEY = "caleta.access";
-const REFRESH_KEY = "caleta.refresh";
-const EXP_KEY = "caleta.exp";
+let cache: { sub: string; email: string } | null = null;
+let cacheAt = 0;
+const CACHE_TTL_MS = 5_000;
 
-export interface Tokens {
-  access: string;
-  refresh: string;
-  exp: number; // unix seconds
-}
-
-function readKey(key: string): string | null {
-  if (typeof localStorage === "undefined") return null;
-  return localStorage.getItem(key);
-}
-
-function writeKey(key: string, value: string | null): void {
-  if (typeof localStorage === "undefined") return;
-  if (value === null) localStorage.removeItem(key);
-  else localStorage.setItem(key, value);
-}
-
-export function getAccessToken(): string | null {
-  return readKey(ACCESS_KEY);
-}
-
-export function getRefreshToken(): string | null {
-  return readKey(REFRESH_KEY);
-}
-
-export function setTokens(input: { access: string; refresh?: string; exp: number }): void {
-  writeKey(ACCESS_KEY, input.access);
-  writeKey(EXP_KEY, String(input.exp));
-  if (input.refresh !== undefined) {
-    writeKey(REFRESH_KEY, input.refresh);
-  }
-}
-
-export function setAccess(access: string, exp: number): void {
-  writeKey(ACCESS_KEY, access);
-  writeKey(EXP_KEY, String(exp));
-}
-
-export function clearTokens(): void {
-  writeKey(ACCESS_KEY, null);
-  writeKey(REFRESH_KEY, null);
-  writeKey(EXP_KEY, null);
-}
-
-export function isAuthenticated(): boolean {
-  const t = getAccessToken();
-  const expStr = readKey(EXP_KEY);
-  if (!t || !expStr) return false;
-  const exp = parseInt(expStr, 10);
-  if (!Number.isFinite(exp)) return false;
-  return exp * 1000 > Date.now();
-}
-
-// Best-effort: decodificamos el payload del JWT (sin verificar firma) sólo
-// para UX. El servidor siempre re-verifica en cada request.
-export interface Decoded {
+export interface SessionUser {
   sub: string;
   email: string;
-  exp: number;
 }
 
-export function decodeToken(token: string): Decoded | null {
+const API_BASE: string = ((import.meta.env.VITE_API_URL as string | undefined) ?? "") || "";
+
+async function apiBase(): Promise<string> {
+  return API_BASE;
+}
+
+export async function isAuthenticated(): Promise<boolean> {
+  const user = await getCurrentUser();
+  return user !== null;
+}
+
+export async function getCurrentUser(): Promise<SessionUser | null> {
+  const now = Date.now();
+  if (cache && now - cacheAt < CACHE_TTL_MS) {
+    return cache;
+  }
   try {
-    const part = token.split(".")[1];
-    if (!part) return null;
-    const padded = part + "=".repeat((4 - (part.length % 4)) % 4);
-    const json = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json) as Decoded;
+    const res = await fetch(`${await apiBase()}/api/me`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      cache = null;
+      cacheAt = now;
+      return null;
+    }
+    const data = (await res.json()) as SessionUser;
+    cache = data;
+    cacheAt = now;
+    return data;
   } catch {
     return null;
   }
+}
+
+export async function clearSession(): Promise<void> {
+  try {
+    await fetch(`${await apiBase()}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch {
+    // ignore
+  }
+  cache = null;
+  cacheAt = 0;
+}
+
+export function authLoginUrl(): string {
+  return `${API_BASE}/auth/google`;
+}
+
+// Helper para que rutas o tests invaliden el cache tras logout manual.
+export function invalidateAuthCache(): void {
+  cache = null;
+  cacheAt = 0;
 }
