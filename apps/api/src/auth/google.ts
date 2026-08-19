@@ -3,6 +3,7 @@
 export interface GoogleProfile {
   sub: string;
   email: string;
+  email_verified?: boolean;
   name: string | null;
   picture: string | null;
 }
@@ -26,7 +27,11 @@ function requireEnv(env: GoogleEnv): { clientId: string; clientSecret: string } 
   return { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET };
 }
 
-export function buildAuthRedirectUrl(env: AuthRedirectEnv, callbackUrl: string): string {
+export function buildAuthRedirectUrl(
+  env: AuthRedirectEnv,
+  callbackUrl: string,
+  state: string,
+): string {
   const { clientId } = requireEnv(env);
   const u = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   u.searchParams.set("client_id", clientId);
@@ -35,7 +40,7 @@ export function buildAuthRedirectUrl(env: AuthRedirectEnv, callbackUrl: string):
   u.searchParams.set("scope", "openid email profile");
   u.searchParams.set("access_type", "offline");
   u.searchParams.set("prompt", "select_account");
-  u.searchParams.set("state", cryptoRandomState());
+  u.searchParams.set("state", state);
   return u.toString();
 }
 
@@ -73,18 +78,20 @@ export async function fetchGoogleProfile(accessToken: string): Promise<GooglePro
   const d = (await res.json()) as {
     sub: string;
     email: string;
+    email_verified?: boolean;
     name?: string;
     picture?: string;
   };
   return {
     sub: d.sub,
     email: d.email,
+    email_verified: d.email_verified,
     name: d.name ?? null,
     picture: d.picture ?? null,
   };
 }
 
-function cryptoRandomState(): string {
+export function cryptoRandomState(): string {
   const arr = new Uint8Array(16);
   crypto.getRandomValues(arr);
   return Array.from(arr)

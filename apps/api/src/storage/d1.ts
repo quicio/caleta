@@ -324,16 +324,32 @@ export class D1Provider implements StorageProvider {
     since: string | undefined,
     now: () => string,
   ): Promise<SyncSnapshot> {
-    const sinceFilter = since ? `AND updated_at > '${since.replace(/'/g, "''")}'` : "";
-    const listsStmt = this.db.prepare(
-      `SELECT * FROM lists WHERE user_id = ?1 AND deleted_at IS NULL ${sinceFilter} ORDER BY updated_at ASC`,
-    );
-    const tasksStmt = this.db.prepare(
-      `SELECT * FROM tasks WHERE user_id = ?1 AND deleted_at IS NULL ${sinceFilter} ORDER BY updated_at ASC`,
-    );
+    const useSince = typeof since === "string" && since.length > 0;
+    const listsStmt = useSince
+      ? this.db.prepare(
+          `SELECT * FROM lists
+           WHERE user_id = ?1 AND deleted_at IS NULL AND updated_at > ?2
+           ORDER BY updated_at ASC`,
+        )
+      : this.db.prepare(
+          `SELECT * FROM lists
+           WHERE user_id = ?1 AND deleted_at IS NULL
+           ORDER BY updated_at ASC`,
+        );
+    const tasksStmt = useSince
+      ? this.db.prepare(
+          `SELECT * FROM tasks
+           WHERE user_id = ?1 AND deleted_at IS NULL AND updated_at > ?2
+           ORDER BY updated_at ASC`,
+        )
+      : this.db.prepare(
+          `SELECT * FROM tasks
+           WHERE user_id = ?1 AND deleted_at IS NULL
+           ORDER BY updated_at ASC`,
+        );
     const [listsRes, tasksRes] = await Promise.all([
-      listsStmt.bind(userId).all(),
-      tasksStmt.bind(userId).all(),
+      useSince ? listsStmt.bind(userId, since).all() : listsStmt.bind(userId).all(),
+      useSince ? tasksStmt.bind(userId, since).all() : tasksStmt.bind(userId).all(),
     ]);
     const lists = ((listsRes.results ?? []) as unknown as Record<string, unknown>[]).map(rowToList);
     const tasks = ((tasksRes.results ?? []) as unknown as Record<string, unknown>[]).map(rowToTask);

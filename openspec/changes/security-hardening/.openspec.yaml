@@ -1,0 +1,7 @@
+schema: spec-driven
+created: 2026-08-19
+goal: Cierra los hallazgos críticos y altos de la auditoría inicial de seguridad
+  y CI del MVP: SQL injection en sync, OAuth sin state, token de GitHub Actions
+  persistente en checkout, ausencia de headers de seguridad y typecheck en CI,
+  fugas de mensajes de error y faltantes de validación. Endurece sin romper
+  contratos públicos.

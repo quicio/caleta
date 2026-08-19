@@ -16,10 +16,14 @@ taskRoutes.use("*", requireAuth);
 function validateCreateInput(body: Record<string, unknown>) {
   const title = typeof body.title === "string" ? body.title.trim() : "";
   if (!title) return { error: "title requerido" as const };
+  if (title.length > 500) return { error: "title demasiado largo (máx 500)" as const };
   const description =
     typeof body.description === "string" || body.description === null
       ? (body.description as string | null)
       : null;
+  if (typeof description === "string" && description.length > 5000) {
+    return { error: "description demasiado larga (máx 5000)" as const };
+  }
   const dueAt = typeof body.due_at === "string" ? body.due_at : null;
   const completed = body.completed === true;
   return { title, description, dueAt, completed };
@@ -64,9 +68,15 @@ taskRoutes.patch("/api/tasks/:id", async (c) => {
   if (typeof body.title === "string") {
     const trimmed = body.title.trim();
     if (!trimmed) return c.json({ error: "title vacío" }, 400);
+    if (trimmed.length > 500) {
+      return c.json({ error: "title demasiado largo (máx 500)" }, 400);
+    }
     patch.title = trimmed;
   }
   if (Object.prototype.hasOwnProperty.call(body, "description")) {
+    if (typeof body.description === "string" && body.description.length > 5000) {
+      return c.json({ error: "description demasiado larga (máx 5000)" }, 400);
+    }
     patch.description = typeof body.description === "string" ? body.description : null;
   }
   if (Object.prototype.hasOwnProperty.call(body, "due_at")) {

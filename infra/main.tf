@@ -89,8 +89,9 @@ resource "null_resource" "d1_migrate" {
 
 # --- Worker Web (SPA como static assets) ---
 resource "cloudflare_workers_script" "web" {
-  account_id  = var.account_id
-  script_name = var.web_worker_name
+  account_id         = var.account_id
+  script_name        = var.web_worker_name
+  compatibility_date = "2025-08-01"
 
   assets = {
     directory = "${path.module}/../apps/web/dist"
