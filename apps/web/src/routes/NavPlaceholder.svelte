@@ -1,6 +1,6 @@
 <script lang="ts">
   import EmptyState from "../lib/ui/EmptyState.svelte";
-  import { navigate } from "../lib/router.svelte";
+  import { navigate } from "../lib/router.svelte.ts";
 
   let { params }: { params: { id: string } } = $props();
 

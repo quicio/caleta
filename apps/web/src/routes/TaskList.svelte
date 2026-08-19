@@ -6,7 +6,7 @@
   import EmptyState from "../lib/ui/EmptyState.svelte";
   import Icon from "../lib/ui/Icon.svelte";
   import { projectColor, timeLabel } from "../lib/ui/theme";
-  import { navigate } from "../lib/router.svelte";
+  import { navigate } from "../lib/router.svelte.ts";
 
   let { params }: { params: { id: string } } = $props();
 
