@@ -13,7 +13,7 @@
     "test": "node --experimental-transform-types --no-warnings test/sync-no-injection.test.ts && node --experimental-transform-types --no-warnings test/refresh.test.ts && node --experimental-transform-types --no-warnings test/ratelimit.test.ts && node --experimental-transform-types --no-warnings test/exchange.test.ts"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250730.0",
+    "@cloudflare/workers-types": "^5.20260816.1",
     "typescript": "^5.6.3",
     "wrangler": "^3.91.0"
   },
