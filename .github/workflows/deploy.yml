@@ -81,6 +81,6 @@ jobs:
           git add infra/terraform.tfstate
           if ! git diff --cached --quiet; then
             git commit -m "chore: actualizar tfstate"
-            git pull --rebase origin main
+            git pull --rebase --strategy-option=theirs origin main
             git push
           fi
