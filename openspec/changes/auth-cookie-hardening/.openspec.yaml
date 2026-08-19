@@ -1,0 +1,7 @@
+schema: spec-driven
+created: 2026-08-19
+goal: Cierra el eslabón más débil del MVP: el JWT vive en localStorage y es
+  exfiltrable por XSS. Migra la sesión a una cookie `__Host-caleta_session`
+  httpOnly+Secure+SameSite=Lax, usando un código de un solo uso en el
+  redirect de OAuth que la SPA canjea por la cookie vía `POST /auth/exchange`.
+  Refresca y logout operan contra cookie. El cliente ya no toca JWT crudo.

@@ -10,7 +10,7 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "cf-typegen": "wrangler types",
-    "test": "node --experimental-transform-types --no-warnings test/sync-no-injection.test.ts && node --experimental-transform-types --no-warnings test/refresh.test.ts && node --experimental-transform-types --no-warnings test/ratelimit.test.ts"
+    "test": "node --experimental-transform-types --no-warnings test/sync-no-injection.test.ts && node --experimental-transform-types --no-warnings test/refresh.test.ts && node --experimental-transform-types --no-warnings test/ratelimit.test.ts && node --experimental-transform-types --no-warnings test/exchange.test.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250730.0",

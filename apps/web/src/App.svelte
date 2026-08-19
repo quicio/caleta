@@ -10,25 +10,23 @@
   import Sidebar from "./lib/ui/Sidebar.svelte";
   import BottomNav from "./lib/ui/BottomNav.svelte";
   import Tabs from "./lib/ui/Tabs.svelte";
-  import { isAuthenticated, decodeToken, getAccessToken, clearTokens } from "./lib/auth";
+  import { isAuthenticated, getCurrentUser, clearSession } from "./lib/auth";
   import { api } from "./lib/api";
   import { navigate, router } from "./lib/router.svelte.ts";
   import { projectColor } from "./lib/ui/theme";
   import type { ApiList } from "./lib/types";
 
-  let authed = $state(isAuthenticated());
+  let authed = $state(false);
+  let authLoading = $state(true);
   let view = $state("today");
   let mobileNav = $state("tasks");
   let lists = $state<ApiList[]>([]);
   let userEmail = $state("");
 
-  function onAuthChange() {
-    authed = isAuthenticated();
-    const token = getAccessToken();
-    if (token) {
-      const d = decodeToken(token);
-      userEmail = d?.email ?? "";
-    }
+  async function refreshAuth() {
+    const user = await getCurrentUser();
+    authed = user !== null;
+    userEmail = user?.email ?? "";
   }
 
   function selectView(v: string) {
@@ -57,17 +55,22 @@
     lists.map((l) => ({ id: l.id, name: l.name, color: projectColor(l.name) })),
   );
 
-  onMount(() => {
-    window.addEventListener("popstate", onAuthChange);
-    if (authed) {
-      refreshLists();
-      onAuthChange();
-    }
-    return () => window.removeEventListener("popstate", onAuthChange);
+  onMount(async () => {
+    await refreshAuth();
+    authLoading = false;
+    if (authed) refreshLists();
+    window.addEventListener("popstate", () => {
+      void refreshAuth();
+    });
+    return () => window.removeEventListener("popstate", () => void refreshAuth());
   });
 </script>
 
-{#if !authed}
+{#if authLoading}
+  <main class="flex min-h-screen items-center justify-center px-6">
+    <p class="font-mono text-xs text-mist/60">Cargando…</p>
+  </main>
+{:else if !authed}
   <Router>
     <Route path="/auth/callback" component={Callback} />
     <Route path="/" component={Login} />
@@ -84,9 +87,10 @@
         selectView("today");
         navigate("/");
       }}
-      onLogout={() => {
-        clearTokens();
+      onLogout={async () => {
+        await clearSession();
         authed = false;
+        userEmail = "";
         navigate("/");
       }}
     />

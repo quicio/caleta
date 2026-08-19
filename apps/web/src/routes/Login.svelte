@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { authLoginUrl } from "../lib/api";
+  import { authLoginUrl } from "../lib/auth";
   import Wordmark from "../lib/ui/Wordmark.svelte";
   import Icon from "../lib/ui/Icon.svelte";
 </script>

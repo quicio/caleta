@@ -4,6 +4,7 @@
 import { Hono } from "hono";
 import { authRoutes } from "./routes/auth.ts";
 import { listRoutes } from "./routes/lists.ts";
+import { meRoutes } from "./routes/me.ts";
 import { syncRoutes } from "./routes/sync.ts";
 import { taskRoutes } from "./routes/tasks.ts";
 
@@ -48,6 +49,7 @@ app.get("/", (c) => c.json({ name: "caleta", status: "ok" }));
 app.get("/healthz", (c) => c.json({ ok: true }));
 
 app.route("/", authRoutes);
+app.route("/", meRoutes);
 app.route("/", listRoutes);
 app.route("/", taskRoutes);
 app.route("/", syncRoutes);

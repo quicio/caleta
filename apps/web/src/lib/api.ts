@@ -1,23 +1,13 @@
-// fetchApi: helper con Authorization, manejo de X-Refresh-Token y retry
-// ante 401 con un único refresh.
+// fetchApi: helper con credentials: include. La sesión viaja en cookies
+// httpOnly — la SPA no toca tokens. El server hace sliding refresh vía
+// Set-Cookie cuando el access expira pronto.
 
-import {
-  clearTokens,
-  getAccessToken,
-  getRefreshToken,
-  setAccess,
-} from "./auth.ts";
 import type { ApiList, ApiTask, SyncPull } from "./types.ts";
 
-// En dev Vite proxea /api → API. En prod, VITE_API_URL debe ser la URL del Worker.
 const API_BASE: string = ((import.meta.env.VITE_API_URL as string | undefined) ?? "") || "";
 
 export function apiBase(): string {
   return API_BASE;
-}
-
-export function authLoginUrl(): string {
-  return `${API_BASE}/auth/google`;
 }
 
 export class ApiError extends Error {
@@ -34,39 +24,19 @@ interface CallOptions {
   method: string;
   path: string;
   body?: unknown;
-  auth?: boolean; // default true
-  _retried?: boolean;
 }
 
 async function call<T>(opts: CallOptions): Promise<T> {
-  const auth = opts.auth !== false;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (auth) {
-    const token = getAccessToken();
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-  }
   const res = await fetch(`${API_BASE}${opts.path}`, {
     method: opts.method,
     headers,
+    credentials: "include",
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
   });
-  // Sliding refresh: si el server nos da un nuevo access, lo guardamos.
-  const refreshed = res.headers.get("X-Refresh-Token");
-  if (refreshed) {
-    // No tenemos `exp` del header; el server siempre emite 1h.
-    const exp = Math.floor(Date.now() / 1000) + 3600;
-    setAccess(refreshed, exp);
-  }
-  if (res.status === 401 && auth && !opts._retried) {
-    const refresh = getRefreshToken();
-    if (refresh) {
-      const ok = await tryRefresh();
-      if (ok) {
-        return call<T>({ ...opts, _retried: true });
-      }
-    }
-    clearTokens();
+  if (res.status === 401) {
     if (typeof location !== "undefined") location.href = "/";
+    throw new ApiError(res.status, `HTTP 401`, null);
   }
   const text = await res.text();
   const data: unknown = text ? JSON.parse(text) : null;
@@ -74,32 +44,6 @@ async function call<T>(opts: CallOptions): Promise<T> {
     throw new ApiError(res.status, `HTTP ${res.status}`, data);
   }
   return data as T;
-}
-
-let refreshInFlight: Promise<boolean> | null = null;
-
-async function tryRefresh(): Promise<boolean> {
-  const refresh = getRefreshToken();
-  if (!refresh) return false;
-  if (refreshInFlight) return refreshInFlight;
-  refreshInFlight = (async () => {
-    try {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refresh }),
-      });
-      if (!res.ok) return false;
-      const data = (await res.json()) as { access_token: string; exp: number };
-      setAccess(data.access_token, data.exp);
-      return true;
-    } catch {
-      return false;
-    } finally {
-      refreshInFlight = null;
-    }
-  })();
-  return refreshInFlight;
 }
 
 // --- API surface ---
@@ -128,5 +72,8 @@ export const api = {
   pullSync(since: string | null): Promise<SyncPull & { watermark: string }> {
     const qs = since ? `?since=${encodeURIComponent(since)}` : "";
     return call({ method: "GET", path: `/api/sync${qs}` });
+  },
+  exchange(code: string): Promise<{ ok: boolean; email: string }> {
+    return call({ method: "POST", path: "/auth/exchange", body: { code } });
   },
 };
