@@ -19,7 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -29,6 +29,9 @@ jobs:
 
       - name: Install deps
         run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck --workspace=apps/api
 
       - name: Build API
         run: npm run build:api
@@ -63,14 +66,21 @@ jobs:
       - name: Redact secrets in tfstate
         run: |
           python3 - "${{ secrets.GOOGLE_CLIENT_ID }}" "${{ secrets.GOOGLE_CLIENT_SECRET }}" "${{ secrets.JWT_SECRET }}" <<'EOF'
-          import sys
+          import sys, json, re
           gid, gsec, jwt = sys.argv[1:4]
           p = "infra/terraform.tfstate"
-          s = open(p).read()
-          for k, v in [("GOOGLE_CLIENT_ID", gid), ("GOOGLE_CLIENT_SECRET", gsec), ("JWT_SECRET", jwt)]:
-              if v:
-                  s = s.replace(v, f"{k}_REDACTED")
-          open(p, "w").write(s)
+          data = json.loads(open(p).read())
+          def redact(o, key):
+              if isinstance(o, dict):
+                  if o.get("type") == "secret_text" and isinstance(o.get("text"), str):
+                      if o["text"] == gid: o["text"] = "GOOGLE_CLIENT_ID_REDACTED"
+                      elif o["text"] == gsec: o["text"] = "GOOGLE_CLIENT_SECRET_REDACTED"
+                      elif o["text"] == jwt: o["text"] = "JWT_SECRET_REDACTED"
+                  for v in o.values(): redact(v, key)
+              elif isinstance(o, list):
+                  for v in o: redact(v, key)
+          redact(data, "")
+          open(p, "w").write(json.dumps(data, indent=2))
           print("tfstate redactado OK")
           EOF
 
@@ -81,6 +91,5 @@ jobs:
           git add infra/terraform.tfstate
           if ! git diff --cached --quiet; then
             git commit -m "chore: actualizar tfstate"
-            git pull --rebase --strategy-option=theirs origin main
-            git push
+            git push https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git HEAD:main
           fi

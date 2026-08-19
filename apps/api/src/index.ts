@@ -1,4 +1,5 @@
-// Punto de entrada del Worker. Monta Hono con CORS y las rutas.
+// Punto de entrada del Worker. Monta Hono con CORS, headers de seguridad
+// y las rutas.
 
 import { Hono } from "hono";
 import { authRoutes } from "./routes/auth.ts";
@@ -30,6 +31,17 @@ app.use("*", async (c, next) => {
   await next();
 });
 
+app.use("*", async (c, next) => {
+  await next();
+  c.res.headers.set("X-Content-Type-Options", "nosniff");
+  c.res.headers.set("Referrer-Policy", "no-referrer");
+  c.res.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  c.res.headers.set(
+    "Content-Security-Policy",
+    "default-src 'none'; frame-ancestors 'none'",
+  );
+});
+
 app.get("/", (c) => c.json({ name: "caleta", status: "ok" }));
 
 app.get("/healthz", (c) => c.json({ ok: true }));
@@ -42,7 +54,7 @@ app.route("/", syncRoutes);
 app.notFound((c) => c.json({ error: "not found" }, 404));
 app.onError((e, c) => {
   console.error("Unhandled error", e);
-  return c.json({ error: e.message ?? "internal error" }, 500);
+  return c.json({ error: "internal error" }, 500);
 });
 
 export default {

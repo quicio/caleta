@@ -18,8 +18,12 @@ listRoutes.post("/api/lists", async (c) => {
   if (!body.name || body.name.trim().length === 0) {
     return c.json({ error: "name requerido" }, 400);
   }
+  const name = body.name.trim();
+  if (name.length > 120) {
+    return c.json({ error: "name demasiado largo (máx 120)" }, 400);
+  }
   const provider = getStorageProvider(c.env);
-  const list = await provider.createList(c.get("user").sub, { name: body.name.trim() });
+  const list = await provider.createList(c.get("user").sub, { name });
   return c.json(list, 201);
 });
 
@@ -38,13 +42,19 @@ listRoutes.get("/api/lists/:id", async (c) => {
 
 listRoutes.patch("/api/lists/:id", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { name?: string };
-  if (body.name !== undefined && body.name.trim().length === 0) {
-    return c.json({ error: "name vacío" }, 400);
+  let name: string | undefined;
+  if (body.name !== undefined) {
+    const trimmed = body.name.trim();
+    if (trimmed.length === 0) {
+      return c.json({ error: "name vacío" }, 400);
+    }
+    if (trimmed.length > 120) {
+      return c.json({ error: "name demasiado largo (máx 120)" }, 400);
+    }
+    name = trimmed;
   }
   const provider = getStorageProvider(c.env);
-  const updated = await provider.updateList(c.get("user").sub, c.req.param("id"), {
-    name: body.name?.trim(),
-  });
+  const updated = await provider.updateList(c.get("user").sub, c.req.param("id"), { name });
   return updated ? c.json(updated) : c.json({ error: "not found" }, 404);
 });
 

@@ -1,0 +1,68 @@
+name: ci
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Typecheck (api)
+        run: npm run typecheck --workspace=apps/api
+
+      - name: Test (api)
+        run: npm run test --workspace=apps/api --if-present
+
+      - name: Build API
+        run: npm run build:api
+        env:
+          CLOUDFLARE_API_TOKEN: dummy
+          CLOUDFLARE_ACCOUNT_ID: dummy
+
+      - name: Build Web
+        run: npm run build:web
+        env:
+          VITE_API_URL: "http://127.0.0.1:8787"
+
+      - name: Terraform validate
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+
+      - name: Terraform fmt
+        run: terraform -chdir=infra fmt -check
+
+      - name: Terraform init
+        run: terraform -chdir=infra init -backend=false
+        env:
+          TF_IN_AUTOMATION: "true"
+
+      - name: Terraform validate
+        run: terraform -chdir=infra validate
+        env:
+          TF_IN_AUTOMATION: "true"
