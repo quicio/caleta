@@ -8,9 +8,9 @@ dist/
 
 # Terraform
 .terraform/
-*.tfstate
 *.tfstate.*
 crash.log
 terraform.tfvars
+# Nota: infra/terraform.tfstate se commitea (secrets redactados) para CI/CD.
 
 # OpenSpec scope is OK to commit

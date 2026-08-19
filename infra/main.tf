@@ -24,6 +24,9 @@ provider "cloudflare" {
 resource "cloudflare_d1_database" "caleta" {
   account_id = var.account_id
   name       = var.d1_database_name
+  read_replication = {
+    mode = "disabled"
+  }
 }
 
 # --- Worker API (Hono) ---
