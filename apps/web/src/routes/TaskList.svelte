@@ -1,16 +1,22 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { navigate } from "../lib/router.svelte";
   import { api } from "../lib/api";
   import type { ApiList, ApiTask } from "../lib/types";
+  import TaskRow from "../lib/ui/TaskRow.svelte";
+  import EmptyState from "../lib/ui/EmptyState.svelte";
+  import Icon from "../lib/ui/Icon.svelte";
+  import { projectColor, timeLabel } from "../lib/ui/theme";
+  import { navigate } from "../lib/router.svelte";
 
-  let { params } = $props<{ params: { id: string } }>();
+  let { params }: { params: { id: string } } = $props();
 
   let list = $state<ApiList | null>(null);
   let tasks = $state<ApiTask[]>([]);
   let newTitle = $state("");
+  let newDue = $state("");
   let loading = $state(false);
   let saving = $state(false);
+  let showQuick = $state(false);
 
   const listId = $derived(params.id);
 
@@ -21,7 +27,7 @@
       const listsRes = await api.listLists();
       list = listsRes.lists.find((l) => l.id === listId) ?? null;
       const tasksRes = await api.listTasks(listId);
-      tasks = tasksRes.tasks;
+      tasks = tasksRes.tasks.filter((x) => !x.deletedAt);
     } finally {
       loading = false;
     }
@@ -34,6 +40,8 @@
     try {
       await api.createTask(listId, newTitle.trim());
       newTitle = "";
+      newDue = "";
+      showQuick = false;
       await load();
     } finally {
       saving = false;
@@ -50,6 +58,9 @@
     tasks = tasks.filter((x) => x.id !== t.id);
   }
 
+  const projectName = $derived(list?.name ?? "");
+  const projectColorValue = $derived(projectColor(projectName));
+
   onMount(load);
 
   $effect(() => {
@@ -57,58 +68,80 @@
   });
 </script>
 
-<main class="max-w-2xl mx-auto px-4 py-8 space-y-6">
-  <header>
-    <button class="text-sm text-slate-500 underline" onclick={() => navigate("/")}>
-      ← Volver
+<main class="mx-auto w-full max-w-2xl flex-1 px-4 pb-24 pt-6 lg:px-8 lg:pb-8">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <button
+        type="button"
+        class="mb-3 inline-flex cursor-pointer items-center gap-1.5 text-sm text-mist transition-colors duration-150 hover:text-ink-0"
+        onclick={() => navigate("/")}
+      >
+        <Icon name="arrow" size={14} />
+        Volver
+      </button>
+      <div class="flex items-center gap-2.5">
+        <span class="size-2.5 rounded-full" style={`background-color:${projectColorValue}`} />
+        <h1 class="text-3xl font-bold tracking-tight">{projectName}</h1>
+      </div>
+      <p class="mt-1 font-mono text-[11px] uppercase tracking-wider text-mist">
+        {tasks.length} tarea{tasks.length === 1 ? "" : "s"}
+      </p>
+    </div>
+    <button type="button" class="btn-primary" onclick={() => (showQuick = !showQuick)}>
+      <Icon name="plus" size={14} strokeWidth={2} />
+      Nueva tarea
     </button>
-    <h1 class="text-xl font-semibold mt-2">
-      {list?.name ?? "—"}
-    </h1>
   </header>
 
-  {#if loading}
-    <p class="text-slate-500">Cargando…</p>
-  {:else}
-    <form onsubmit={addTask} class="flex gap-2">
+  {#if showQuick}
+    <form onsubmit={addTask} class="mt-6 rounded-lg border border-surface-2 bg-surface p-3">
       <input
         class="input"
-        placeholder="Nueva tarea..."
+        placeholder="¿Qué tienes que hacer?"
         bind:value={newTitle}
         disabled={saving}
+        autofocus
       />
-      <button class="btn-primary" type="submit" disabled={saving || !newTitle.trim()}>
-        Añadir
-      </button>
-    </form>
-
-    {#if tasks.length === 0}
-      <div class="border border-dashed border-slate-300 rounded-lg p-8 text-center text-slate-500">
-        Sin tareas todavía.
+      <div class="mt-2 flex items-center justify-between gap-2">
+        <input
+          type="datetime-local"
+          class="input w-auto font-mono text-[11px]"
+          bind:value={newDue}
+          disabled={saving}
+        />
+        <button type="submit" class="btn-primary" disabled={saving || !newTitle.trim()}>
+          Crear
+        </button>
       </div>
-    {:else}
-      <ul class="space-y-2">
-        {#each tasks as t (t.id)}
-          <li class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 flex items-center gap-3">
-            <input
-              type="checkbox"
-              class="size-5 accent-violet-600"
-              checked={t.completed}
-              onchange={() => toggleComplete(t)}
-            />
-            <span class="flex-1 {t.completed ? 'line-through text-slate-400' : ''}">
-              {t.title}
-            </span>
-            <button class="btn-danger" onclick={() => removeTask(t)}>
-              x
-            </button>
-          </li>
-        {/each}
-      </ul>
-    {/if}
+    </form>
   {/if}
 
-  <p class="text-xs text-slate-400 text-center pt-8">
-    Cambios guardados automaticamente.
-  </p>
+  {#if loading && tasks.length === 0}
+    <p class="pt-16 text-center font-mono text-xs text-mist/50">Cargando…</p>
+  {:else if tasks.length === 0}
+    <EmptyState
+      title="Aún no hay tareas por aquí."
+      copy="Tómate un respiro o crea tu primera tarea."
+    >
+      {#snippet action()}
+        <button type="button" class="btn-primary" onclick={() => (showQuick = true)}>
+          <Icon name="plus" size={14} strokeWidth={2} />
+          Crear tarea
+        </button>
+      {/snippet}
+    </EmptyState>
+  {:else}
+    <section class="mt-6 rounded-lg border border-surface-2/60 bg-surface">
+      {#each tasks as t (t.id)}
+        <TaskRow
+          title={t.title}
+          completed={t.completed}
+          dueLabel={timeLabel(t.dueAt)}
+          projectColor={projectColorValue}
+          onToggle={() => toggleComplete(t)}
+          onDelete={() => removeTask(t)}
+        />
+      {/each}
+    </section>
+  {/if}
 </main>

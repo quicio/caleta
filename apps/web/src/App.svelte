@@ -1,30 +1,106 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import Router from "./lib/Router.svelte";
   import Route from "./lib/Route.svelte";
   import Login from "./routes/Login.svelte";
   import Callback from "./routes/Callback.svelte";
-  import Lists from "./routes/Lists.svelte";
+  import Home from "./routes/Home.svelte";
   import TaskList from "./routes/TaskList.svelte";
+  import NavPlaceholder from "./routes/NavPlaceholder.svelte";
+  import Sidebar from "./lib/ui/Sidebar.svelte";
+  import BottomNav from "./lib/ui/BottomNav.svelte";
+  import Tabs from "./lib/ui/Tabs.svelte";
   import { isAuthenticated } from "./lib/auth";
+  import { decodeToken } from "./lib/auth";
+  import { api } from "./lib/api";
+  import { navigate, router } from "./lib/router.svelte";
+  import { projectColor } from "./lib/ui/theme";
+  import type { ApiList } from "./lib/types";
 
   let authed = $state(isAuthenticated());
+  let view = $state("today");
+  let mobileNav = $state("tasks");
+  let lists = $state<ApiList[]>([]);
+  let userEmail = $state("");
 
   function onAuthChange() {
     authed = isAuthenticated();
+    const token = localStorage.getItem("caleta.token");
+    if (token) {
+      const d = decodeToken(token);
+      userEmail = d?.email ?? "";
+    }
   }
 
-  if (typeof window !== "undefined") {
-    // Re-evaluamos auth cuando cambia la URL (callback pone el token).
-    window.addEventListener("popstate", onAuthChange);
+  function selectView(v: string) {
+    view = v;
+    if (router.pathname !== "/") navigate("/");
   }
+
+  function selectProject(id: string) {
+    navigate(`/lists/${id}`);
+  }
+
+  function selectMobileNav(v: string) {
+    mobileNav = v;
+    if (v === "tasks") {
+      if (router.pathname !== "/") navigate("/");
+    } else {
+      navigate(`/nav/${v}`);
+    }
+  }
+
+  function refreshLists() {
+    void api.listLists().then((r) => (lists = r.lists));
+  }
+
+  const projectItems = $derived(
+    lists.map((l) => ({ id: l.id, name: l.name, color: projectColor(l.name) })),
+  );
+
+  onMount(() => {
+    window.addEventListener("popstate", onAuthChange);
+    if (authed) {
+      refreshLists();
+      onAuthChange();
+    }
+    return () => window.removeEventListener("popstate", onAuthChange);
+  });
 </script>
 
-<Router>
-  {#if authed}
-    <Route path="/" component={Lists} />
-    <Route path="/lists/:id" component={TaskList} />
-  {:else}
+{#if !authed}
+  <Router>
     <Route path="/auth/callback" component={Callback} />
     <Route path="/" component={Login} />
-  {/if}
-</Router>
+  </Router>
+{:else}
+  <div class="flex min-h-screen">
+    <Sidebar
+      active={view}
+      projects={projectItems}
+      userName={userEmail}
+      onSelect={selectView}
+      onProject={selectProject}
+      onNew={() => {
+        selectView("today");
+        navigate("/");
+      }}
+      onLogout={() => {
+        localStorage.removeItem("caleta.token");
+        authed = false;
+        navigate("/");
+      }}
+    />
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <Tabs active={view} onSelect={selectView} />
+      <Router>
+        <Route path="/" component={Home} view={view} onViewChange={selectView} />
+        <Route path="/lists/:id" component={TaskList} />
+        <Route path="/nav/:id" component={NavPlaceholder} />
+      </Router>
+    </div>
+
+    <BottomNav active={mobileNav} onSelect={selectMobileNav} />
+  </div>
+{/if}

@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-08-19
+goal: Reemplazar la estética por defecto del frontend (Svelte 5 + Tailwind v4)
+  por un sistema de diseño "neo-noir" oscuro, minimalista y con acento lima,
+  coherente entre desktop y mobile, sin cambiar el backend ni el modelo de datos.

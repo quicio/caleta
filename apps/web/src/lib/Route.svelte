@@ -2,15 +2,23 @@
   import type { Component } from "svelte";
   import { router, matchPath } from "../lib/router.svelte";
 
-  let { path = "/", component }: { path?: string; component?: Component<any> } =
-    $props();
+  let {
+    path = "/",
+    component,
+    ...rest
+  }: {
+    path?: string;
+    component?: Component<any>;
+    [key: string]: unknown;
+  } = $props();
 
   const matched = $derived(matchPath(path, router.pathname));
   const Comp = component as unknown as Component<{
     params: Record<string, string>;
+    [key: string]: unknown;
   }> | undefined;
 </script>
 
 {#if matched !== null && Comp}
-  <Comp params={matched} />
+  <Comp params={matched} {...rest} />
 {/if}
