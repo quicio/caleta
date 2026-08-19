@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-08-19
+goal: Cierra el audit #6: agrega Dependabot para PRs automáticos de versiones
+  y un step de `npm audit --omit=dev --audit-level=high` en CI que falla el
+  build si hay vulnerabilidades altas en runtime deps.
