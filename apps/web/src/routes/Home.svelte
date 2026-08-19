@@ -86,16 +86,17 @@
   onMount(refresh);
 </script>
 
-<main class="mx-auto w-full max-w-2xl flex-1 px-4 pb-24 pt-6 lg:px-8 lg:pb-8">
-  <header class="flex flex-wrap items-end justify-between gap-4">
+<main class="relative mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-7 lg:px-12 lg:pb-10 lg:pt-12">
+  <header class="relative z-10 flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="text-3xl font-bold tracking-tight">{titleMap[view] ?? "Hoy"}</h1>
-      <p class="mt-1 font-mono text-[11px] uppercase tracking-wider text-mist">
+      <p class="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-lime/75">Tu caleta</p>
+      <h1 class="text-4xl font-bold tracking-[-0.06em] sm:text-5xl">{titleMap[view] ?? "Hoy"}</h1>
+      <p class="mt-2 font-mono text-[11px] tracking-wide text-mist">
         {todayLabel()}
       </p>
     </div>
     <div class="flex items-center gap-3">
-      <span class="font-mono text-[11px] text-mist">
+      <span class="font-mono text-[11px] text-mist/75">
         {filtered.length} tarea{filtered.length === 1 ? "" : "s"}
       </span>
       <button type="button" class="btn-primary" onclick={() => (showQuick = !showQuick)}>
@@ -106,7 +107,7 @@
   </header>
 
   {#if showQuick}
-    <form onsubmit={createTask} class="mt-6 rounded-lg border border-surface-2 bg-surface p-3">
+    <form onsubmit={createTask} class="panel relative z-10 mt-7 rounded-xl border border-surface-2 bg-surface p-4">
       <input
         class="input"
         placeholder="¿Qué tienes que hacer?"
@@ -136,9 +137,18 @@
       copy={view === "done"
         ? "Todavía no completaste ninguna."
         : "Tómate un respiro o crea tu primera tarea."}
-    />
+    >
+      {#snippet action()}
+        {#if view !== "done"}
+          <button type="button" class="btn-primary" onclick={() => (showQuick = true)}>
+            <Icon name="plus" size={14} strokeWidth={2} />
+            Crear tarea
+          </button>
+        {/if}
+      {/snippet}
+    </EmptyState>
   {:else}
-    <section class="mt-6 rounded-lg border border-surface-2/60 bg-surface">
+    <section class="panel relative z-10 mt-8 overflow-hidden rounded-xl border border-surface-2/70 bg-surface">
       {#each filtered as t (t.id)}
         <TaskRow
           title={t.title}
@@ -151,5 +161,13 @@
         />
       {/each}
     </section>
+    <aside class="relative z-10 mt-7 min-h-36 overflow-hidden rounded-xl border border-surface-2/60 bg-surface/45 px-5 py-5 sm:px-7">
+      <img src="/images/lighthouse-task-panel.png" alt="Faro iluminando la noche" class="art-fade absolute inset-y-0 right-0 h-full w-[56%] object-cover object-right opacity-50" />
+      <div class="relative max-w-xs">
+        <p class="font-mono text-[10px] uppercase tracking-[0.16em] text-lime/80">Un momento a la vez</p>
+        <p class="mt-3 font-mono text-xs leading-5 text-mist">No se trata de tener tiempo, sino de decidir en qué usarlo.</p>
+        <p class="mt-2 font-mono text-[10px] text-mist/55">— Caleta</p>
+      </div>
+    </aside>
   {/if}
 </main>

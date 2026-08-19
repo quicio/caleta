@@ -36,38 +36,36 @@
 </script>
 
 <aside
-  class="hidden w-56 shrink-0 flex-col border-r border-surface-2/60 bg-surface lg:flex"
+  class="panel hidden w-[270px] shrink-0 flex-col border-r border-surface-2/60 lg:flex"
 >
-  <div class="px-5 pb-4 pt-6">
+  <div class="px-6 pb-7 pt-8">
     <button type="button" onclick={() => onSelect("today")} class="cursor-pointer">
       <Wordmark />
     </button>
   </div>
 
-  <nav class="flex-1 space-y-0.5 px-3">
+  <nav class="space-y-1 px-4">
     {#each views as v (v.id)}
       <button
         type="button"
         onclick={() => onSelect(v.id)}
-        class="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors duration-150 {active ===
+        class="flex w-full cursor-pointer items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-150 {active ===
         v.id
-          ? 'bg-surface-2 text-ink-0'
+          ? 'bg-moss/45 text-lime shadow-[inset_0_1px_rgb(255_255_255/3%)]'
           : 'text-mist hover:bg-surface-2/50 hover:text-ink-0'}"
       >
-        {#if active === v.id}
-          <span class="size-1.5 rounded-full bg-lime" />
-        {:else}
-          <span class="size-1.5 rounded-full bg-transparent" />
-        {/if}
-        {v.label}
+        <span class="flex items-center gap-2.5">
+          {#if active === v.id}<span class="size-1.5 rounded-full bg-lime shadow-[0_0_8px_#e7ff44]" />{:else}<span class="size-1.5 rounded-full bg-transparent" />{/if}
+          {v.label}
+        </span>
       </button>
     {/each}
   </nav>
 
-  <div class="mx-3 my-2 border-t border-surface-2/60" />
+  <div class="mx-5 my-5 border-t border-surface-2/60" />
 
-  <div class="flex-1 space-y-0.5 px-3">
-    <p class="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-widest text-mist/40">
+  <div class="flex-1 space-y-1 px-4">
+    <p class="px-3 pb-2 text-[10px] font-mono uppercase tracking-[0.18em] text-mist/50">
       Proyectos
     </p>
     {#if projects.length === 0}
@@ -77,7 +75,7 @@
         <button
           type="button"
           onclick={() => onProject(p.id)}
-          class="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-mist transition-colors duration-150 hover:bg-surface-2/50 hover:text-ink-0"
+          class="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-mist transition-colors duration-150 hover:bg-surface-2/50 hover:text-ink-0"
         >
           <span class="size-1.5 shrink-0 rounded-full" style={`background-color:${p.color}`} />
           <span class="truncate">{p.name}</span>
@@ -86,11 +84,11 @@
     {/if}
   </div>
 
-  <div class="border-t border-surface-2/60 px-3 py-3">
+  <div class="border-t border-surface-2/60 px-4 py-5">
     <button
       type="button"
       onclick={onNew}
-      class="mb-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-md border border-lime bg-lime px-3 py-1.5 text-sm font-medium text-ink transition-colors duration-150 hover:bg-lime/90"
+      class="mb-5 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-lime bg-lime px-3 py-2.5 text-sm font-medium text-ink shadow-[0_0_24px_rgb(231_255_68/12%)] transition-colors duration-150 hover:bg-lime/90"
     >
       <Icon name="plus" size={14} strokeWidth={2} />
       Nueva tarea

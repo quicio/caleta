@@ -26,7 +26,7 @@
 </script>
 
 <div
-  class="group flex items-center gap-3 border-b border-surface-2/60 px-3 py-3 transition-colors duration-150 hover:bg-surface/70"
+  class="group flex items-center gap-3 border-b border-surface-2/60 px-4 py-3.5 transition-colors duration-150 hover:bg-white/[0.018]"
   onmouseenter={() => (hovering = true)}
   onmouseleave={() => (hovering = false)}
 >
@@ -36,22 +36,20 @@
     onclick={onToggle}
   />
 
-  <div class="flex min-w-0 flex-1 items-center gap-2.5">
-    {#if projectColor}
-      <span class="size-2 shrink-0 rounded-full" style={`background-color:${projectColor}`} />
-    {/if}
-    <span
+  <div class="min-w-0 flex-1">
+    <div class="flex items-center gap-2.5">
+      <span
       class="truncate text-sm transition-colors duration-150 {completed
         ? 'text-mist line-through decoration-mist/40'
         : 'text-ink-0'}"
-    >
-      {title}
-    </span>
+      >{title}</span>
+      {#if important}<Icon name="star" size={13} class="shrink-0 text-lime" strokeWidth={2} />{/if}
+    </div>
     {#if listName}
-      <span class="hidden shrink-0 text-[11px] text-mist/60 sm:inline">{listName}</span>
-    {/if}
-    {#if important}
-      <Icon name="star" size={12} class="shrink-0 text-lime" strokeWidth={2} />
+      <span class="mt-1 flex items-center gap-1.5 text-[11px] text-mist/70">
+        {#if projectColor}<span class="size-1.5 shrink-0 rounded-full" style={`background-color:${projectColor}`} />{/if}
+        {listName}
+      </span>
     {/if}
   </div>
 

@@ -74,7 +74,7 @@
     <Route path="/" component={Login} />
   </Router>
 {:else}
-  <div class="flex min-h-screen">
+  <div class="relative flex min-h-screen overflow-hidden">
     <Sidebar
       active={view}
       projects={projectItems}
@@ -92,7 +92,7 @@
       }}
     />
 
-    <div class="flex min-w-0 flex-1 flex-col">
+    <div class="relative z-10 flex min-w-0 flex-1 flex-col">
       <Tabs active={view} onSelect={selectView} />
       <Router>
         <Route path="/" component={Home} view={view} onViewChange={selectView} />

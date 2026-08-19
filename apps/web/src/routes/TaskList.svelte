@@ -68,7 +68,7 @@
   });
 </script>
 
-<main class="mx-auto w-full max-w-2xl flex-1 px-4 pb-24 pt-6 lg:px-8 lg:pb-8">
+<main class="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-7 lg:px-12 lg:pb-10 lg:pt-12">
   <header class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <button
@@ -81,7 +81,7 @@
       </button>
       <div class="flex items-center gap-2.5">
         <span class="size-2.5 rounded-full" style={`background-color:${projectColorValue}`} />
-        <h1 class="text-3xl font-bold tracking-tight">{projectName}</h1>
+        <h1 class="text-4xl font-bold tracking-[-0.06em] sm:text-5xl">{projectName}</h1>
       </div>
       <p class="mt-1 font-mono text-[11px] uppercase tracking-wider text-mist">
         {tasks.length} tarea{tasks.length === 1 ? "" : "s"}
@@ -94,7 +94,7 @@
   </header>
 
   {#if showQuick}
-    <form onsubmit={addTask} class="mt-6 rounded-lg border border-surface-2 bg-surface p-3">
+    <form onsubmit={addTask} class="panel mt-7 rounded-xl border border-surface-2 bg-surface p-4">
       <input
         class="input"
         placeholder="¿Qué tienes que hacer?"
@@ -131,7 +131,7 @@
       {/snippet}
     </EmptyState>
   {:else}
-    <section class="mt-6 rounded-lg border border-surface-2/60 bg-surface">
+    <section class="panel mt-8 overflow-hidden rounded-xl border border-surface-2/70 bg-surface">
       {#each tasks as t (t.id)}
         <TaskRow
           title={t.title}
