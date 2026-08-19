@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Component } from "svelte";
-  import { router, matchPath } from "../lib/router.svelte";
+  import { router, matchPath } from "../lib/router.svelte.ts";
 
   let {
     path = "/",

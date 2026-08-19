@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { navigate } from "../lib/router.svelte";
+  import { navigate } from "../lib/router.svelte.ts";
 
   let {
     to,

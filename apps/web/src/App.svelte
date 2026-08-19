@@ -13,7 +13,7 @@
   import { isAuthenticated } from "./lib/auth";
   import { decodeToken } from "./lib/auth";
   import { api } from "./lib/api";
-  import { navigate, router } from "./lib/router.svelte";
+  import { navigate, router } from "./lib/router.svelte.ts";
   import { projectColor } from "./lib/ui/theme";
   import type { ApiList } from "./lib/types";
 
