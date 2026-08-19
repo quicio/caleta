@@ -8,6 +8,14 @@ binding = "DB"
 database_name = "caleta"
 database_id = "TODO_PEGAR_DESPUES_DE_wrangler_d1_create"
 
+# KV binding (rate limit). El id real se asigna vía Terraform
+# (cloudflare_workers_kv_namespace.caleta_ratelimit). Para `wrangler dev`
+# local, podés crear el namespace con `wrangler kv:namespace create caleta_ratelimit`
+# y pegar el id acá.
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "TODO_PEGAR_DESPUES_DE_wrangler_kv_create"
+
 # Vars (configurar via `wrangler secret put` para valores sensibles)
 [vars]
 STORAGE_PROVIDER = "d1"

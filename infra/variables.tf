@@ -42,6 +42,12 @@ variable "d1_database_name" {
   default = "caleta"
 }
 
+variable "kv_namespace_title" {
+  description = "Título del namespace KV usado para rate limit."
+  type        = string
+  default     = "caleta_ratelimit"
+}
+
 variable "api_worker_name" {
   type    = string
   default = "caleta-api"

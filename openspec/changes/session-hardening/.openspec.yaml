@@ -1,0 +1,6 @@
+schema: spec-driven
+created: 2026-08-19
+goal: Reduce la ventana de exposición de un JWT robado (TTL corto + refresh
+  con sliding window) y agrega rate limiting por IP/token en endpoints
+  sensibles (auth callback, sync). Endurece sin romper el flujo del cliente
+  que ya está en producción.

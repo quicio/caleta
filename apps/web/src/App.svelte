@@ -10,8 +10,7 @@
   import Sidebar from "./lib/ui/Sidebar.svelte";
   import BottomNav from "./lib/ui/BottomNav.svelte";
   import Tabs from "./lib/ui/Tabs.svelte";
-  import { isAuthenticated } from "./lib/auth";
-  import { decodeToken } from "./lib/auth";
+  import { isAuthenticated, decodeToken, getAccessToken, clearTokens } from "./lib/auth";
   import { api } from "./lib/api";
   import { navigate, router } from "./lib/router.svelte.ts";
   import { projectColor } from "./lib/ui/theme";
@@ -25,7 +24,7 @@
 
   function onAuthChange() {
     authed = isAuthenticated();
-    const token = localStorage.getItem("caleta.token");
+    const token = getAccessToken();
     if (token) {
       const d = decodeToken(token);
       userEmail = d?.email ?? "";
@@ -86,7 +85,7 @@
         navigate("/");
       }}
       onLogout={() => {
-        localStorage.removeItem("caleta.token");
+        clearTokens();
         authed = false;
         navigate("/");
       }}

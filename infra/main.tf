@@ -29,6 +29,12 @@ resource "cloudflare_d1_database" "caleta" {
   }
 }
 
+# --- KV (rate limit) ---
+resource "cloudflare_workers_kv_namespace" "ratelimit" {
+  account_id = var.account_id
+  title      = var.kv_namespace_title
+}
+
 # --- Worker API (Hono) ---
 resource "cloudflare_workers_script" "api" {
   account_id         = var.account_id
@@ -42,6 +48,11 @@ resource "cloudflare_workers_script" "api" {
       name        = "DB"
       type        = "d1"
       database_id = cloudflare_d1_database.caleta.id
+    },
+    {
+      name         = "RATE_LIMIT"
+      type         = "kv_namespace"
+      namespace_id = cloudflare_workers_kv_namespace.ratelimit.id
     },
     {
       name = "STORAGE_PROVIDER"
