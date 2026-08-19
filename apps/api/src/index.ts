@@ -14,6 +14,7 @@ type Bindings = {
   STORAGE_PROVIDER?: string;
   WEB_URL: string;
   DB: D1Database;
+  RATE_LIMIT?: KVNamespace;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();

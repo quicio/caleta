@@ -1,24 +1,30 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { setToken } from "../lib/auth";
+  import { setTokens } from "../lib/auth";
   import Wordmark from "../lib/ui/Wordmark.svelte";
 
   let error = $state<string | null>(null);
 
   onMount(() => {
     const hash = window.location.hash ?? "";
-    const m = hash.match(/token=([^&]+)/);
-    if (!m) {
-      error = "No se recibió token en el callback.";
+    // Soporta dos formatos:
+    //   Nuevo: #access=<jwt>&refresh=<jwt>&exp=<unix>
+    //   Legacy: #token=<jwt>   (sólo access, sin refresh — se aceptará hasta expirar)
+    const params = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+    const access = params.get("access") ?? params.get("token");
+    const refresh = params.get("refresh") ?? null;
+    const expStr = params.get("exp");
+    if (!access) {
+      error = "No se recibieron tokens en el callback.";
       return;
     }
     try {
-      const token = decodeURIComponent(m[1]);
-      setToken(token);
+      const exp = expStr ? parseInt(expStr, 10) : Math.floor(Date.now() / 1000) + 3600;
+      setTokens({ access, refresh: refresh ?? undefined, exp });
       history.replaceState(null, "", "/");
       window.location.href = "/";
     } catch {
-      error = "Token inválido";
+      error = "Tokens inválidos";
     }
   });
 </script>
