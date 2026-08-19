@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -77,5 +81,6 @@ jobs:
           git add infra/terraform.tfstate
           if ! git diff --cached --quiet; then
             git commit -m "chore: actualizar tfstate"
+            git pull --rebase origin main
             git push
           fi
