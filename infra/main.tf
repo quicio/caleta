@@ -14,6 +14,16 @@ terraform {
       version = "~> 3.2"
     }
   }
+
+  # Backend S3-compatible apuntando a un bucket R2 dedicado.
+  # Los valores completos se pasan en `terraform init` via env vars
+  # (TF_BACKEND_*) o -backend-config. Las credenciales viven en
+  # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (R2 emite tokens
+  # S3-compatibles bajo esos nombres). Ver infra/scripts/bootstrap-tfstate.sh
+  # para el setup inicial y RUNBOOK sección 5.1.
+  backend "s3" {
+    # placeholders — los valores reales se pasan en init
+  }
 }
 
 provider "cloudflare" {

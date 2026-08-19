@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-08-19
+goal: Cierra el audit #10 moviendo el state de Terraform a un bucket R2
+  dedicado. El repo deja de contener infra state; el state vive fuera del
+  árbol de código bajo las credenciales del bucket.
