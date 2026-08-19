@@ -9,9 +9,11 @@ dist/
 
 # Terraform
 .terraform/
-*.tfstate.*
+*.tfstate*
+.terraform.tfstate.lock.info
 crash.log
 terraform.tfvars
-# Nota: infra/terraform.tfstate se commitea (secrets redactados) para CI/CD.
+# El state vive en un bucket R2 dedicado (ver infra/scripts/bootstrap-tfstate.sh
+# y RUNBOOK §5.1). Nunca se commitea.
 
 # OpenSpec scope is OK to commit

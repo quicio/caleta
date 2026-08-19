@@ -31,6 +31,7 @@ PATCH/DELETE /api/tasks/:id GET /api/sync?since=<ISO8601>
 | `JWT_SECRET` | `.env` → Worker (secret) | vos |
 | `CF_API_TOKEN` | `.env` (solo local) | Cloudflare (tu cuenta) |
 | `CF_ACCOUNT_ID` / `ACCOUNT_SUBDOMAIN` | `.env` (solo local) | Cloudflare |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | `.env` (solo local) | Cloudflare R2 API token |
 | `VITE_API_URL` | embebido en el build del web | derivado en `make build-web` |
 | `WEB_URL` | `.env` → Worker (plain) | derivado en `make infra-apply` |
 
@@ -47,10 +48,13 @@ El **único** archivo de configuración es `.env` (gitignored). Terraform lo lee
 ### Primera vez (bootstrap)
 
 ```bash
-make setup          # crea .env + instala deps
+make setup              # crea .env + instala deps
 # editar .env: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, JWT_SECRET,
 #   CF_API_TOKEN, CF_ACCOUNT_ID, ACCOUNT_SUBDOMAIN
-make infra-init     # terraform init (una vez)
+make bootstrap-state    # crea bucket R2 + instrucciones para el API token
+# editar .env: R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+make infra-init         # terraform init (con backend R2, migra state local)
+# agregar a GitHub Secrets: R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
 make deploy
 ```
 
@@ -127,6 +131,37 @@ npx wrangler d1 time-travel caleta --remote
 
 > Los comandos `wrangler d1 ... --remote` requieren `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` en el entorno.
 
+## 5.1. State de Terraform en R2
+
+El state vive en el bucket R2 `caleta-tfstate` bajo tu cuenta Cloudflare, **no** en el repo. El bucket es gratis en el free tier (10 GB / 1M ops/mes). El setup es de una vez.
+
+### Setup inicial
+
+1. `make setup` (si no lo hiciste) + editar `.env` con `CF_ACCOUNT_ID` y `ACCOUNT_SUBDOMAIN`.
+2. `make bootstrap-state`:
+   - Crea el bucket `caleta-tfstate` con `wrangler r2 bucket create`.
+   - Imprime las instrucciones para crear el API token en el dashboard.
+3. Crear el API token en <https://dash.cloudflare.com/?to=/:account/r2/api-tokens>:
+   - Permisos: **Object Read & Write**.
+   - Scope: **Specify bucket(s)** → `caleta-tfstate`.
+   - TTL recomendado: 1 año.
+4. Pegar `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY` en `.env`.
+5. Agregar las mismas dos vars como GitHub Secrets (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`).
+6. `make infra-init` — Terraform detecta el state local (si existe) y pregunta si migra a R2. Decir `yes`.
+7. `make deploy`.
+
+### Backup del state
+
+El state en R2 es la source of truth. Backup manual ocasional:
+
+```bash
+npx wrangler r2 object get caleta-tfstate/caleta.tfstate --file=backup-$(date +%F).tfstate
+```
+
+### Pérdida de credenciales R2
+
+Si perdés el API token: crear uno nuevo en el dashboard, actualizar `.env` y los GitHub Secrets. El state en el bucket no se pierde (sólo cambia quién puede leerlo). Si perdés también el bucket, el state se pierde — el `infra/main.tf` queda como única fuente y hay que correr `terraform import` para cada recurso.
+
 ## 6. Rotación de secretos
 
 ### `JWT_SECRET` (invalida TODAS las sesiones)
@@ -146,6 +181,11 @@ npx wrangler d1 time-travel caleta --remote
 
 1. Cloudflare → My Profile → API Tokens → rotar.
 2. Actualizar `CF_API_TOKEN` en `.env`. Solo se usa localmente para deploy; no afecta al runtime.
+
+### `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`
+
+1. Cloudflare → R2 → Manage R2 API Tokens → rotar.
+2. Actualizar ambas en `.env` y en GitHub Secrets. El state en el bucket no se ve afectado.
 
 ## 7. Incidentes comunes
 

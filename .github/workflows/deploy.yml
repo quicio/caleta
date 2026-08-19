@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   deploy:
@@ -53,6 +53,15 @@ jobs:
         run: terraform -chdir=infra init
         env:
           TF_IN_AUTOMATION: "true"
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          TF_BACKEND_BUCKET: "caleta-tfstate"
+          TF_BACKEND_KEY: "caleta.tfstate"
+          TF_BACKEND_REGION: "auto"
+          TF_BACKEND_ENDPOINTS_S3: "https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+          TF_BACKEND_SKIP_CREDENTIALS_VALIDATION: "true"
+          TF_BACKEND_SKIP_REGION_VALIDATION: "true"
+          TF_BACKEND_SKIP_REQUESTING_ACCOUNT_ID: "true"
 
       - name: Terraform Apply
         run: terraform -chdir=infra apply -auto-approve
@@ -65,34 +74,5 @@ jobs:
           TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
           TF_VAR_web_url: https://caleta-web.${{ secrets.ACCOUNT_SUBDOMAIN }}.workers.dev
-
-      - name: Redact secrets in tfstate
-        run: |
-          python3 - "${{ secrets.GOOGLE_CLIENT_ID }}" "${{ secrets.GOOGLE_CLIENT_SECRET }}" "${{ secrets.JWT_SECRET }}" <<'EOF'
-          import sys, json, re
-          gid, gsec, jwt = sys.argv[1:4]
-          p = "infra/terraform.tfstate"
-          data = json.loads(open(p).read())
-          def redact(o, key):
-              if isinstance(o, dict):
-                  if o.get("type") == "secret_text" and isinstance(o.get("text"), str):
-                      if o["text"] == gid: o["text"] = "GOOGLE_CLIENT_ID_REDACTED"
-                      elif o["text"] == gsec: o["text"] = "GOOGLE_CLIENT_SECRET_REDACTED"
-                      elif o["text"] == jwt: o["text"] = "JWT_SECRET_REDACTED"
-                  for v in o.values(): redact(v, key)
-              elif isinstance(o, list):
-                  for v in o: redact(v, key)
-          redact(data, "")
-          open(p, "w").write(json.dumps(data, indent=2))
-          print("tfstate redactado OK")
-          EOF
-
-      - name: Commit updated tfstate
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add infra/terraform.tfstate
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: actualizar tfstate"
-            git push https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git HEAD:main
-          fi
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
