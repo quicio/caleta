@@ -1,0 +1,5 @@
+name = "caleta-web"
+compatibility_date = "2025-08-01"
+
+# SPA como static assets (deploya con terraform; este archivo sirve para wrangler dev/deploy local)
+assets = { directory = "./dist", not_found_handling = "single-page-application" }

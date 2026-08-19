@@ -1,0 +1,22 @@
+{
+  "name": "caleta",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Listas de pendientes multi-dispositivo en Cloudflare Workers/D1 — storage con abstracción de proveedor, Google OAuth, SPA Svelte 5.",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build:api": "npm run build --workspace=apps/api",
+    "build:web": "npm run build --workspace=apps/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:migrate:local": "wrangler d1 execute caleta --local --file=./apps/api/migrations/0001_init.sql",
+    "db:migrate": "wrangler d1 execute caleta --file=./apps/api/migrations/0001_init.sql"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

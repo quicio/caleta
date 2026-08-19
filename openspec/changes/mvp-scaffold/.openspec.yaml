@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-08-17
+goal: Scaffold a working MVP that the user can run locally and deploy to
+  Cloudflare, with a clean StorageProvider abstraction so future backends
+  (Postgres, IndexedDB) can swap in without API-level changes.

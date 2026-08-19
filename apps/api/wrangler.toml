@@ -1,0 +1,15 @@
+name = "caleta-api"
+main = "src/index.ts"
+compatibility_date = "2025-08-01"
+
+# D1 binding
+[[d1_databases]]
+binding = "DB"
+database_name = "caleta"
+database_id = "TODO_PEGAR_DESPUES_DE_wrangler_d1_create"
+
+# Vars (configurar via `wrangler secret put` para valores sensibles)
+[vars]
+STORAGE_PROVIDER = "d1"
+# WEB_URL se setea via secret si es dinámica, o aquí como default
+WEB_URL = "http://localhost:5173"

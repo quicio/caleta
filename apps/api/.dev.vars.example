@@ -1,0 +1,7 @@
+# Local secrets loaded by `wrangler dev` automatically.
+# Copiá este archivo a `.dev.vars` y rellená los valores.
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+JWT_SECRET=cambia-esto-a-un-string-largo-y-random-32+
+WEB_URL=http://localhost:5173
