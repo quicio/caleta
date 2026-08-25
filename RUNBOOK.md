@@ -223,13 +223,13 @@ Cada request genera un `request_id` (16 chars hex) que se devuelve en el header 
 ### Cómo consumir
 
 ```bash
-# Local
-npx wrangler tail --format=json   # JSON estructurado
-npx wrangler tail --format=pretty # legible para humanos
+# Local (nombre del worker obligatorio)
+npx wrangler tail caleta-api --format=json   # JSON estructurado
+npx wrangler tail caleta-api --format=pretty # legible para humanos
 
 # Filtrar por nivel / mensaje
-npx wrangler tail | grep '"level":"error"'
-npx wrangler tail | grep '"request_id":"a1b2c3"'
+npx wrangler tail caleta-api --format=json | grep '"level":"error"'
+npx wrangler tail caleta-api --format=json | grep '"request_id":"a1b2c3"'
 ```
 
 En producción, los logs aparecen en **Workers & Pages → caleta-api → Logs** en el dashboard de Cloudflare.
