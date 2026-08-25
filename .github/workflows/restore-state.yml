@@ -52,7 +52,7 @@ jobs:
           TF_VAR_web_url: https://caleta-web.${{ secrets.ACCOUNT_SUBDOMAIN }}.workers.dev
 
       - name: Import KV
-        run: terraform -chdir=infra import cloudflare_workers_kv_namespace.ratelimit e020b35e5e304bdab059113179d04481
+        run: terraform -chdir=infra import cloudflare_workers_kv_namespace.ratelimit "${{ secrets.CF_ACCOUNT_ID }}/e020b35e5e304bdab059113179d04481"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
