@@ -157,6 +157,7 @@
       description?: string | null;
       dueAt?: string | null;
       priority?: "normal" | "high";
+      listId?: string;
     },
   ) {
     const body: Record<string, unknown> = {};
@@ -164,6 +165,7 @@
     if (patch.description !== undefined) body.description = patch.description;
     if (patch.dueAt !== undefined) body.due_at = patch.dueAt;
     if (patch.priority !== undefined) body.priority = patch.priority;
+    if (patch.listId !== undefined) body.list_id = patch.listId;
     try {
       const updated = await api.patchTask(t.id, body);
       tasks = tasks.map((x) => (x.id === t.id ? updated : x));
@@ -369,6 +371,7 @@
       <TaskSidePanel
         task={selectedTask}
         list={selectedList}
+        lists={lists}
         allTasks={tasks}
         focusActive={focusMode && focusedTaskId === selectedTaskId}
         onClose={closePanel}

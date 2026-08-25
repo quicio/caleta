@@ -72,6 +72,7 @@ export const api = {
       due_at?: string | null;
       depends_on?: string | null;
       priority?: "normal" | "high";
+      list_id?: string;
     },
   ): Promise<ApiTask> {
     return call({ method: "PATCH", path: `/api/tasks/${id}`, body: patch });
@@ -81,6 +82,9 @@ export const api = {
   },
   setTaskPriority(taskId: string, priority: "normal" | "high"): Promise<ApiTask> {
     return call({ method: "PATCH", path: `/api/tasks/${taskId}`, body: { priority } });
+  },
+  setTaskList(taskId: string, listId: string): Promise<ApiTask> {
+    return call({ method: "PATCH", path: `/api/tasks/${taskId}`, body: { list_id: listId } });
   },
   deleteTask(id: string): Promise<void> {
     return call({ method: "DELETE", path: `/api/tasks/${id}` });
