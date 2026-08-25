@@ -55,7 +55,7 @@ jobs:
             -backend-config="bucket=caleta-tfstate" \
             -backend-config="key=caleta.tfstate" \
             -backend-config="region=auto" \
-            -backend-config="endpoints=https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com" \
+            -backend-config='endpoints={s3="https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com"}' \
             -backend-config="skip_credentials_validation=true" \
             -backend-config="skip_region_validation=true" \
             -backend-config="skip_requesting_account_id=true"
