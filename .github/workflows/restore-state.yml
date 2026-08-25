@@ -41,6 +41,8 @@ jobs:
       - name: Import D1
         run: terraform -chdir=infra import cloudflare_d1_database.caleta 9659344f-86a9-430e-bacd-8eb421c46ee7
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           TF_VAR_cloudflare_api_token: ${{ secrets.CF_API_TOKEN }}
           TF_VAR_account_id: ${{ secrets.CF_ACCOUNT_ID }}
           TF_VAR_account_subdomain: ${{ secrets.ACCOUNT_SUBDOMAIN }}
@@ -48,11 +50,12 @@ jobs:
           TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
           TF_VAR_web_url: https://caleta-web.${{ secrets.ACCOUNT_SUBDOMAIN }}.workers.dev
-        continue-on-error: true
 
       - name: Import KV
         run: terraform -chdir=infra import cloudflare_workers_kv_namespace.ratelimit e020b35e5e304bdab059113179d04481
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           TF_VAR_cloudflare_api_token: ${{ secrets.CF_API_TOKEN }}
           TF_VAR_account_id: ${{ secrets.CF_ACCOUNT_ID }}
           TF_VAR_account_subdomain: ${{ secrets.ACCOUNT_SUBDOMAIN }}
@@ -60,11 +63,12 @@ jobs:
           TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
           TF_VAR_web_url: https://caleta-web.${{ secrets.ACCOUNT_SUBDOMAIN }}.workers.dev
-        continue-on-error: true
 
       - name: Import API worker
         run: terraform -chdir=infra import cloudflare_workers_script.api "${{ secrets.CF_ACCOUNT_ID }}/caleta-api"
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           TF_VAR_cloudflare_api_token: ${{ secrets.CF_API_TOKEN }}
           TF_VAR_account_id: ${{ secrets.CF_ACCOUNT_ID }}
           TF_VAR_account_subdomain: ${{ secrets.ACCOUNT_SUBDOMAIN }}
@@ -72,11 +76,12 @@ jobs:
           TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
           TF_VAR_web_url: https://caleta-web.${{ secrets.ACCOUNT_SUBDOMAIN }}.workers.dev
-        continue-on-error: true
 
       - name: Import Web worker
         run: terraform -chdir=infra import cloudflare_workers_script.web "${{ secrets.CF_ACCOUNT_ID }}/caleta-web"
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           TF_VAR_cloudflare_api_token: ${{ secrets.CF_API_TOKEN }}
           TF_VAR_account_id: ${{ secrets.CF_ACCOUNT_ID }}
           TF_VAR_account_subdomain: ${{ secrets.ACCOUNT_SUBDOMAIN }}
@@ -84,4 +89,3 @@ jobs:
           TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
           TF_VAR_web_url: https://caleta-web.${{ secrets.ACCOUNT_SUBDOMAIN }}.workers.dev
-        continue-on-error: true
