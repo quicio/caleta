@@ -8,6 +8,8 @@ import { listRoutes } from "./routes/lists.ts";
 import { meRoutes } from "./routes/me.ts";
 import { syncRoutes } from "./routes/sync.ts";
 import { taskRoutes } from "./routes/tasks.ts";
+import { logger, type LoggerEnv } from "./middleware/logger.ts";
+import { log } from "./lib/log.ts";
 
 type Bindings = {
   GOOGLE_CLIENT_ID?: string;
@@ -19,7 +21,9 @@ type Bindings = {
   RATE_LIMIT?: KVNamespace;
 };
 
-const app = new Hono<{ Bindings: Bindings }>();
+const app = new Hono<{ Bindings: Bindings; Variables: LoggerEnv["Variables"] }>();
+
+app.use("*", logger());
 
 app.use("*", async (c, next) => {
   const origin = c.req.header("origin");
@@ -59,7 +63,11 @@ app.route("/", calendarRoutes);
 
 app.notFound((c) => c.json({ error: "not found" }, 404));
 app.onError((e, c) => {
-  console.error("Unhandled error", e);
+  log.error("unhandled", {
+    request_id: c.get("request_id"),
+    message: e instanceof Error ? e.message : String(e),
+    stack: e instanceof Error ? e.stack : undefined,
+  });
   return c.json({ error: "internal error" }, 500);
 });
 

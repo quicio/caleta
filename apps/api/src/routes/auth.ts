@@ -28,6 +28,7 @@ import {
 } from "../auth/code.ts";
 import { getStorageProvider } from "../storage/index.ts";
 import { ipScope, rateLimit, type RateLimitEnv } from "../middleware/ratelimit.ts";
+import { log } from "../lib/log.ts";
 
 type Bindings = AuthRedirectEnv & {
   DB?: D1Database;
@@ -127,7 +128,10 @@ authRoutes.get(
       c.header("Set-Cookie", clearStateCookie(), { append: true });
       return c.redirect(redirectUrl.toString());
     } catch (e) {
-      console.error("OAuth callback failed", e);
+      log.error("oauth_callback_failed", {
+        request_id: c.get("request_id"),
+        message: e instanceof Error ? e.message : String(e),
+      });
       c.header("Set-Cookie", clearStateCookie(), { append: true });
       return c.json({ error: "internal error" }, 400);
     }

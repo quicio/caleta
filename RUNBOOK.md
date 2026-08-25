@@ -187,7 +187,54 @@ Si perdés el API token: crear uno nuevo en el dashboard, actualizar `.env` y lo
 1. Cloudflare → R2 → Manage R2 API Tokens → rotar.
 2. Actualizar ambas en `.env` y en GitHub Secrets. El state en el bucket no se ve afectado.
 
-## 7. Incidentes comunes
+## 7. Observabilidad
+
+Todos los logs son JSON en stdout/stderr — wrangler tail y Cloudflare Workers Logs los capturan sin config extra.
+
+### Formato
+
+Cada línea es un objeto JSON con shape estable:
+
+```json
+{ "ts": "2026-08-25T18:00:00.000Z", "level": "info", "msg": "http",
+  "request_id": "a1b2c3...", "method": "GET", "route": "/api/lists",
+  "status": 200, "duration_ms": 12, "user_id": "google-sub" }
+```
+
+Niveles: `debug` (off por default) · `info` · `warn` · `error`. Para subir detalle:
+
+```bash
+wrangler secret put CALETA_LOG_LEVEL   # valor: "debug"
+```
+
+### request_id
+
+Cada request genera un `request_id` (16 chars hex) que se devuelve en el header `x-request-id`. Lo agrega el middleware `logger()` y se loguea en cada access log + log de error/warn — útil para cruzar logs con feedback de usuarios.
+
+### Eventos con log estructurado
+
+- `http` (info/warn/error): access log de cada request — uno por request.
+- `auth_failed` (warn): sesión inválida en rutas protegidas.
+- `rate_limit_exceeded` (warn): KV scope + route + limit.
+- `oauth_callback_failed` (error): fallo en el callback de Google.
+- `calendar_fetch_failed` (error): fallo al hablar con Google Calendar API.
+- `unhandled` (error): cualquier 500 no esperado.
+
+### Cómo consumir
+
+```bash
+# Local
+npx wrangler tail --format=json   # JSON estructurado
+npx wrangler tail --format=pretty # legible para humanos
+
+# Filtrar por nivel / mensaje
+npx wrangler tail | grep '"level":"error"'
+npx wrangler tail | grep '"request_id":"a1b2c3"'
+```
+
+En producción, los logs aparecen en **Workers & Pages → caleta-api → Logs** en el dashboard de Cloudflare.
+
+## 8. Incidentes comunes
 
 | Síntoma | Causa probable | Acción |
 | --- | --- | --- |
@@ -200,7 +247,7 @@ Si perdés el API token: crear uno nuevo en el dashboard, actualizar `.env` y lo
 | Worker en error 500 en todos los endpoints | Bug en el deploy | `wrangler tail` para ver el stack; rollback con git + `make deploy` |
 | D1 da `SQLITE_BUSY`/quota | Límite free tier alcanzado | Ver sección 9 |
 
-## 8. Cambios de schema (migraciones)
+## 9. Cambios de schema (migraciones)
 
 Las migraciones viven en `apps/api/migrations/`. El apply corre la que esté cableada en `infra/main.tf` (hoy: `0001_init.sql`) vía el `null_resource.d1_migrate`.
 
@@ -212,7 +259,7 @@ Para agregar una:
 
 Rollback de schema: manual — D1 no tiene rollback automático de `ALTER`. Probá en local antes: `make db-migrate-local` (usa `wrangler d1 execute --local`).
 
-## 9. Free tier y límites
+## 10. Free tier y límites
 
 | Recurso | Límite gratis | Monitor |
 | --- | --- | --- |
@@ -222,7 +269,7 @@ Rollback de schema: manual — D1 no tiene rollback automático de `ALTER`. Prob
 
 Con uso personal (1 usuario, sync manual) no se acerca al límite. Si llegás, los síntomas son 500 en escrituras/lecturas y errores de D1.
 
-## 10. Recuperación ante desastre (recrear desde cero)
+## 11. Recuperación ante desastre (recrear desde cero)
 
 1. `make setup` y llenar `.env` (si perdiste el archivo, las claves de Google/JWT son las únicas que no se regeneran solas — restáuralas del gestor de secretos o rota: sección 6).
 2. `make infra-init && make deploy` — recrea D1, workers y migraciones.
