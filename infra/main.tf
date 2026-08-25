@@ -95,12 +95,16 @@ resource "cloudflare_workers_script" "api" {
 # --- Migración D1 (idempotente) ---
 resource "null_resource" "d1_migrate" {
   triggers = {
-    migration_file = filemd5("${path.module}/../apps/api/migrations/0001_init.sql")
+    migration_0001 = filemd5("${path.module}/../apps/api/migrations/0001_init.sql")
+    migration_0002 = filemd5("${path.module}/../apps/api/migrations/0002_task_links.sql")
     d1_id          = cloudflare_d1_database.caleta.id
   }
 
   provisioner "local-exec" {
-    command = "npx wrangler d1 execute ${var.d1_database_name} --remote --file=${path.module}/../apps/api/migrations/0001_init.sql"
+    command = <<-EOT
+      npx wrangler d1 execute ${var.d1_database_name} --remote --file=${path.module}/../apps/api/migrations/0001_init.sql &&
+      npx wrangler d1 execute ${var.d1_database_name} --remote --file=${path.module}/../apps/api/migrations/0002_task_links.sql
+    EOT
     environment = {
       CLOUDFLARE_API_TOKEN  = var.cloudflare_api_token
       CLOUDFLARE_ACCOUNT_ID = var.account_id

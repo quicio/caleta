@@ -40,3 +40,37 @@ export function isToday(iso: string | null): boolean {
     d.getDate() === now.getDate()
   );
 }
+
+export function dueLabel(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isToday(iso)) return `Hoy ${timeLabel(iso)}`;
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d
+    .toLocaleDateString("es-AR", sameYear ? { day: "numeric", month: "short" } : { day: "numeric", month: "short", year: "numeric" })
+    .replace(/^\w/, (c) => c.toUpperCase());
+}
+
+// Tokens para la carta náutica del mapa.
+// ponytail: vivos a propósito — son valores SVG-only y no se exportan a CSS.
+// Subir opacity global si se nota el fondo muy apagado en monitores claros.
+export const CHART = {
+  grid: "rgba(231, 255, 68, 0.04)",
+  gridStrong: "rgba(231, 255, 68, 0.07)",
+  contour: "rgba(125, 211, 168, 0.10)",
+  contourStrong: "rgba(125, 211, 168, 0.18)",
+  coord: "rgba(161, 161, 170, 0.35)",
+  territoryStroke: "rgba(231, 255, 68, 0.18)",
+  territoryStrokeActive: "rgba(231, 255, 68, 0.42)",
+  route: "rgba(161, 161, 170, 0.35)",
+  routeFocus: "rgba(231, 255, 68, 0.75)",
+  nodeFill: "#0B0F10",
+  nodeStroke: "#1A2023",
+  nodeFillActive: "#203A2E",
+  nodeFillCompleted: "#121719",
+  nodeFillSelected: "#E7FF44",
+  nodeStrokeSelected: "#E7FF44",
+  lighthouse: "rgba(231, 255, 68, 0.85)",
+  beam: "rgba(231, 255, 68, 0.18)",
+  beamEdge: "rgba(231, 255, 68, 0.55)",
+};

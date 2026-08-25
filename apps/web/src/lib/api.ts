@@ -63,8 +63,24 @@ export const api = {
   createTask(listId: string, title: string): Promise<ApiTask> {
     return call({ method: "POST", path: `/api/lists/${listId}/tasks`, body: { title } });
   },
-  patchTask(id: string, patch: { completed?: boolean; title?: string }): Promise<ApiTask> {
+  patchTask(
+    id: string,
+    patch: {
+      completed?: boolean;
+      title?: string;
+      description?: string | null;
+      due_at?: string | null;
+      depends_on?: string | null;
+      priority?: "normal" | "high";
+    },
+  ): Promise<ApiTask> {
     return call({ method: "PATCH", path: `/api/tasks/${id}`, body: patch });
+  },
+  setTaskDependency(taskId: string, dependsOnId: string | null): Promise<ApiTask> {
+    return call({ method: "PATCH", path: `/api/tasks/${taskId}`, body: { depends_on: dependsOnId } });
+  },
+  setTaskPriority(taskId: string, priority: "normal" | "high"): Promise<ApiTask> {
+    return call({ method: "PATCH", path: `/api/tasks/${taskId}`, body: { priority } });
   },
   deleteTask(id: string): Promise<void> {
     return call({ method: "DELETE", path: `/api/tasks/${id}` });

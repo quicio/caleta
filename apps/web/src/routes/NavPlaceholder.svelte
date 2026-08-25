@@ -16,7 +16,7 @@
 <main class="mx-auto w-full max-w-2xl flex-1 px-4 pb-24 pt-6 lg:px-8 lg:pb-8">
   <h1 class="text-3xl font-bold tracking-tight">{title}</h1>
   <EmptyState
-    title={`{title} llegará pronto.`}
+    title={`${title} llegará pronto.`}
     copy="Esta vista forma parte del diseño; la funcionalidad llega en un cambio futuro."
   >
     {#snippet action()}
