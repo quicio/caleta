@@ -50,18 +50,19 @@ jobs:
           terraform_version: 1.15.8
 
       - name: Terraform Init
-        run: terraform -chdir=infra init
+        run: |
+          terraform -chdir=infra init \
+            -backend-config="bucket=caleta-tfstate" \
+            -backend-config="key=caleta.tfstate" \
+            -backend-config="region=auto" \
+            -backend-config="endpoints=https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com" \
+            -backend-config="skip_credentials_validation=true" \
+            -backend-config="skip_region_validation=true" \
+            -backend-config="skip_requesting_account_id=true"
         env:
           TF_IN_AUTOMATION: "true"
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          TF_BACKEND_BUCKET: "caleta-tfstate"
-          TF_BACKEND_KEY: "caleta.tfstate"
-          TF_BACKEND_REGION: "auto"
-          TF_BACKEND_ENDPOINTS_S3: "https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com"
-          TF_BACKEND_SKIP_CREDENTIALS_VALIDATION: "true"
-          TF_BACKEND_SKIP_REGION_VALIDATION: "true"
-          TF_BACKEND_SKIP_REQUESTING_ACCOUNT_ID: "true"
 
       - name: Terraform Apply
         run: terraform -chdir=infra apply -auto-approve
