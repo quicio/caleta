@@ -6,7 +6,7 @@ compatibility_date = "2025-08-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "caleta"
-database_id = "TODO_PEGAR_DESPUES_DE_wrangler_d1_create"
+database_id = "9659344f-86a9-430e-bacd-8eb421c46ee7"
 
 # KV binding (rate limit). El id real se asigna vía Terraform
 # (cloudflare_workers_kv_namespace.caleta_ratelimit). Para `wrangler dev`
@@ -14,10 +14,10 @@ database_id = "TODO_PEGAR_DESPUES_DE_wrangler_d1_create"
 # y pegar el id acá.
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "TODO_PEGAR_DESPUES_DE_wrangler_kv_create"
+id = "e020b35e5e304bdab059113179d04481"
 
 # Vars (configurar via `wrangler secret put` para valores sensibles)
 [vars]
 STORAGE_PROVIDER = "d1"
 # WEB_URL se setea via secret si es dinámica, o aquí como default
-WEB_URL = "http://localhost:5173"
+WEB_URL = "https://caleta-web.hg-moraga.workers.dev"

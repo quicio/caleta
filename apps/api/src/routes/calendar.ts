@@ -102,11 +102,26 @@ async function fetchCalendarEvents(
     }
     if (res.status === 403) {
       const body = await res.text();
-      // "Insufficient Permission" o "Access Not Configured" — generalmente
-      // significa que el refresh_token no tiene calendar.readonly. Forzamos
-      // re-consent para que el usuario otorgue el scope.
-      const err = new Error(`insufficient_scope: ${body.slice(0, 200)}`);
-      (err as Error & { status?: number }).status = 403;
+      // 403 de Calendar API puede significar varias cosas distintas:
+      //  - "insufficient permission": el refresh_token no trae calendar.readonly
+      //    → el usuario debe re-consentir (prompt=consent ya lo fuerza).
+      //  - "accessNotConfigured": la Calendar API no está habilitada en el
+      //    proyecto de Google Cloud de este OAuth client → nada que reconectar
+      //    lo arregla; hay que activarla en la consola de GCP.
+      const reason = (() => {
+        try {
+          const j = JSON.parse(body) as {
+            error?: { message?: string; errors?: Array<{ reason?: string }> };
+          };
+          const r = j.error?.errors?.[0]?.reason;
+          return r ?? j.error?.message?.slice(0, 80) ?? "unknown";
+        } catch {
+          return body.slice(0, 80) || "unknown";
+        }
+      })();
+      const err = new Error(`google_403:${reason}`);
+      (err as Error & { status?: number; googleReason?: string }).status = 403;
+      (err as Error & { googleReason?: string }).googleReason = reason;
       throw err;
     }
     if (!res.ok) {
@@ -168,7 +183,25 @@ calendarRoutes.get(
         return c.json({ error: "google_reauth_required" }, 401);
       }
       if (status === 403) {
-        return c.json({ error: "calendar_scope_missing" }, 403);
+        const reason = (e as Error & { googleReason?: string }).googleReason;
+        log.warn("calendar_403", {
+          request_id: c.get("request_id"),
+          user_id: userId,
+          google_reason: reason,
+        });
+        // accessNotConfigured = la Calendar API no está habilitada en GCP.
+        // No es un problema de scope ni de sesión; reconectar no ayuda.
+        if (reason?.toLowerCase().includes("accessnotconfigured")) {
+          return c.json({ error: "calendar_api_not_configured" }, 403);
+        }
+        if (
+          reason?.toLowerCase().includes("insufficient") ||
+          reason?.toLowerCase().includes("permission") ||
+          reason?.toLowerCase().includes("forbidden")
+        ) {
+          return c.json({ error: "calendar_scope_missing" }, 403);
+        }
+        return c.json({ error: "calendar_api_error", reason }, 403);
       }
       log.error("calendar_fetch_failed", {
         request_id: c.get("request_id"),
