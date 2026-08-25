@@ -198,39 +198,40 @@
     if (!focus) return true;
     if (t.id === focusedTaskId) return true;
     if (t.listId === focus.listId) return true;
-    const chain = new Set<string>([focus.id]);
+    const taskById = new Map(tasks.map((x) => [x.id, x]));
+
+    // Forward: tareas que dependen del foco (focus → sus dependientes → transitivo).
+    const downstream = new Set<string>([focus.id]);
     let frontier: string[] = [focus.id];
     while (frontier.length) {
       const next: string[] = [];
       for (const id of frontier) {
         for (const t2 of tasks) {
-          if (t2.dependsOn === id && !chain.has(t2.id)) {
-            chain.add(t2.id);
+          if (t2.dependsOn === id && !downstream.has(t2.id)) {
+            downstream.add(t2.id);
             next.push(t2.id);
           }
         }
       }
       frontier = next;
     }
-    const reverse = new Set<string>([focus.id]);
-    let rfrontier: string[] = [focus.id];
-    while (rfrontier.length) {
+
+    // Backward: tareas de las que depende el foco (focus ← su dep ← transitivo).
+    const upstream = new Set<string>([focus.id]);
+    let back: string[] = [focus.id];
+    while (back.length) {
       const next: string[] = [];
-      for (const id of rfrontier) {
-        for (const t2 of tasks) {
-          if (t2.id === id) continue;
-          if (t2.dependsOn === id && !reverse.has(t2.id)) {
-            // already added
-          }
-          if ((t2.dependsOn === id || reverse.has(t2.dependsOn ?? "")) && !reverse.has(t2.id)) {
-            reverse.add(t2.id);
-            next.push(t2.id);
-          }
+      for (const id of back) {
+        const t2 = taskById.get(id);
+        if (t2?.dependsOn && !upstream.has(t2.dependsOn)) {
+          upstream.add(t2.dependsOn);
+          next.push(t2.dependsOn);
         }
       }
-      rfrontier = next;
+      back = next;
     }
-    return chain.has(t.id) || reverse.has(t.id);
+
+    return downstream.has(t.id) || upstream.has(t.id);
   }
 
   function nodeOpacity(t: ApiTask): number {

@@ -6,6 +6,7 @@ export interface User {
   email: string;
   name: string | null;
   pictureUrl: string | null;
+  googleRefreshToken: string | null;
   createdAt: string;      // ISO 8601
   updatedAt: string;
 }
@@ -83,7 +84,9 @@ export interface StorageProvider {
     email: string;
     name: string | null;
     pictureUrl: string | null;
+    googleRefreshToken?: string | null;
   }): Promise<User>;
+  saveGoogleRefreshToken(userId: string, refreshToken: string | null): Promise<void>;
 
   // --- lists ---
   createList(userId: string, input: CreateListInput): Promise<List>;

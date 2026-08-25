@@ -7,10 +7,10 @@
   import Home from "./routes/Home.svelte";
   import TaskList from "./routes/TaskList.svelte";
   import Mapa from "./routes/Mapa.svelte";
+  import Calendario from "./routes/Calendario.svelte";
   import NavPlaceholder from "./routes/NavPlaceholder.svelte";
   import Sidebar from "./lib/ui/Sidebar.svelte";
   import BottomNav from "./lib/ui/BottomNav.svelte";
-  import Tabs from "./lib/ui/Tabs.svelte";
   import { isAuthenticated, getCurrentUser, clearSession } from "./lib/auth";
   import { api } from "./lib/api";
   import { navigate, router } from "./lib/router.svelte.ts";
@@ -20,7 +20,6 @@
   let authed = $state(false);
   let authLoading = $state(true);
   let view = $state("lista");
-  let mobileNav = $state("tasks");
   let lists = $state<ApiList[]>([]);
   let userEmail = $state("");
 
@@ -35,7 +34,7 @@
     if (v === "mapa") {
       if (router.pathname !== "/mapa") navigate("/mapa");
     } else if (v === "calendario") {
-      if (router.pathname !== "/nav/calendario") navigate("/nav/calendario");
+      if (router.pathname !== "/calendario") navigate("/calendario");
     } else {
       if (router.pathname !== "/") navigate("/");
     }
@@ -46,16 +45,12 @@
     navigate(`/lists/${id}`);
   }
 
-  function selectMobileNav(v: string) {
-    mobileNav = v;
-    if (v === "tasks") {
-      view = "lista";
-      if (router.pathname !== "/") navigate("/");
-    } else if (v === "map") {
-      view = "mapa";
-      if (router.pathname !== "/mapa") navigate("/mapa");
-    } else {
-      navigate(`/nav/${v}`);
+  async function createProject(name: string) {
+    try {
+      const created = await api.createList(name);
+      lists = [...lists, created];
+    } catch {
+      // feedback ausente — input se queda para retry
     }
   }
 
@@ -99,6 +94,7 @@
         selectView("lista");
         navigate("/");
       }}
+      onCreateProject={createProject}
       onLogout={async () => {
         await clearSession();
         authed = false;
@@ -107,16 +103,16 @@
       }}
     />
 
-    <div class="relative z-10 flex min-w-0 flex-1 flex-col">
-      <Tabs active={view} onSelect={selectView} />
+    <div class="relative z-10 flex min-w-0 flex-1 flex-col pb-16 lg:pb-0">
       <Router>
         <Route path="/" component={Home} view={view} onViewChange={selectView} />
         <Route path="/mapa" component={Mapa} />
+        <Route path="/calendario" component={Calendario} />
         <Route path="/lists/:id" component={TaskList} />
         <Route path="/nav/:id" component={NavPlaceholder} />
       </Router>
     </div>
 
-    <BottomNav active={mobileNav} onSelect={selectMobileNav} />
+    <BottomNav active={view} onSelect={selectView} />
   </div>
 {/if}

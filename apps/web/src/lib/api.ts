@@ -96,4 +96,19 @@ export const api = {
   exchange(code: string): Promise<{ ok: boolean; email: string }> {
     return call({ method: "POST", path: "/auth/exchange", body: { code } });
   },
+  listCalendarEvents(from: string, to: string): Promise<{
+    events: Array<{
+      id: string;
+      summary: string;
+      start: { iso: string; timeZone?: string };
+      end: { iso: string; timeZone?: string };
+      allDay: boolean;
+      location: string | null;
+      htmlLink: string | null;
+      hangoutLink: string | null;
+    }>;
+  }> {
+    const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+    return call({ method: "GET", path: `/api/calendar/events${qs}` });
+  },
 };

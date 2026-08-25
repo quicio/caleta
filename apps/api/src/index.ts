@@ -3,6 +3,7 @@
 
 import { Hono } from "hono";
 import { authRoutes } from "./routes/auth.ts";
+import { calendarRoutes } from "./routes/calendar.ts";
 import { listRoutes } from "./routes/lists.ts";
 import { meRoutes } from "./routes/me.ts";
 import { syncRoutes } from "./routes/sync.ts";
@@ -54,6 +55,7 @@ app.route("/", meRoutes);
 app.route("/", listRoutes);
 app.route("/", taskRoutes);
 app.route("/", syncRoutes);
+app.route("/", calendarRoutes);
 
 app.notFound((c) => c.json({ error: "not found" }, 404));
 app.onError((e, c) => {

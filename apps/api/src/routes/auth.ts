@@ -88,7 +88,11 @@ authRoutes.get(
     }
     const callbackUrl = new URL("/auth/google/callback", c.req.url).toString();
     try {
-      const { accessToken } = await exchangeCodeForToken(c.env, code, callbackUrl);
+      const { accessToken, refreshToken } = await exchangeCodeForToken(
+        c.env,
+        code,
+        callbackUrl,
+      );
       const profile = await fetchGoogleProfile(accessToken);
       if (profile.email_verified === false) {
         c.header("Set-Cookie", clearStateCookie(), { append: true });
@@ -100,6 +104,7 @@ authRoutes.get(
         email: profile.email,
         name: profile.name,
         pictureUrl: profile.picture,
+        googleRefreshToken: refreshToken,
       });
       if (!c.env.JWT_SECRET || !c.env.RATE_LIMIT) {
         c.header("Set-Cookie", clearStateCookie(), { append: true });

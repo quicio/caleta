@@ -9,6 +9,7 @@
     onSelect,
     onProject,
     onNew,
+    onCreateProject,
     onLogout,
   }: {
     active: string;
@@ -17,6 +18,7 @@
     onSelect: (view: string) => void;
     onProject: (id: string) => void;
     onNew: () => void;
+    onCreateProject: (name: string) => Promise<void> | void;
     onLogout: () => void;
   } = $props();
 
@@ -32,6 +34,24 @@
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  let creatingProject = $state(false);
+  let newProjectName = $state("");
+  let creating = $state(false);
+
+  async function submitProject(e: SubmitEvent) {
+    e.preventDefault();
+    const name = newProjectName.trim();
+    if (!name) return;
+    creating = true;
+    try {
+      await onCreateProject(name);
+      newProjectName = "";
+      creatingProject = false;
+    } finally {
+      creating = false;
+    }
+  }
 </script>
 
 <aside
@@ -64,10 +84,55 @@
   <div class="mx-5 my-5 border-t border-surface-2/60" />
 
   <div class="flex-1 space-y-1 px-4">
-    <p class="px-3 pb-2 text-[10px] font-mono uppercase tracking-[0.18em] text-mist/50">
-      Proyectos
-    </p>
-    {#if projects.length === 0}
+    <div class="flex items-center justify-between px-3 pb-2">
+      <p class="font-mono text-[10px] uppercase tracking-[0.18em] text-mist/50">
+        Proyectos
+      </p>
+      <button
+        type="button"
+        onclick={() => (creatingProject = !creatingProject)}
+        class="rounded p-0.5 text-mist/60 transition-colors hover:bg-surface-2 hover:text-lime"
+        aria-label="Nuevo proyecto"
+        title="Nuevo proyecto"
+      >
+        <Icon name="plus" size={12} strokeWidth={2} />
+      </button>
+    </div>
+
+    {#if creatingProject}
+      <form onsubmit={submitProject} class="mb-2 space-y-1.5 rounded-md border border-surface-2/70 bg-surface-2/40 p-2">
+        <input
+          class="input py-1 text-xs"
+          placeholder="Nombre del proyecto"
+          bind:value={newProjectName}
+          disabled={creating}
+          autofocus
+          aria-label="Nombre del nuevo proyecto"
+        />
+        <div class="flex items-center justify-end gap-1.5">
+          <button
+            type="button"
+            class="rounded px-2 py-1 font-mono text-[10px] text-mist hover:text-ink-0"
+            onclick={() => {
+              creatingProject = false;
+              newProjectName = "";
+            }}
+            disabled={creating}
+          >
+            cancelar
+          </button>
+          <button
+            type="submit"
+            class="rounded border border-lime bg-lime px-2 py-1 font-mono text-[10px] font-medium text-ink hover:bg-lime/90 disabled:opacity-40"
+            disabled={creating || !newProjectName.trim()}
+          >
+            crear
+          </button>
+        </div>
+      </form>
+    {/if}
+
+    {#if projects.length === 0 && !creatingProject}
       <p class="px-2.5 py-1 text-xs text-mist/40">Sin proyectos todavía.</p>
     {:else}
       {#each projects as p (p.id)}

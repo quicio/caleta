@@ -15,8 +15,6 @@ export interface GoogleEnv {
 }
 
 export interface AuthRedirectEnv extends GoogleEnv {
-  // URL absoluta al endpoint de callback en este Worker.
-  // Provista por el caller (request.url + c.req.path) o fija en deploy.
   CALLBACK_URL?: string;
 }
 
@@ -37,8 +35,15 @@ export function buildAuthRedirectUrl(
   u.searchParams.set("client_id", clientId);
   u.searchParams.set("redirect_uri", callbackUrl);
   u.searchParams.set("response_type", "code");
-  u.searchParams.set("scope", "openid email profile");
+  u.searchParams.set(
+    "scope",
+    "openid email profile https://www.googleapis.com/auth/calendar.readonly",
+  );
+  // ponytail: include_granted_scopes=true hace que Google reuse scopes ya
+  // otorgados y muestre solo los nuevos en el consent. Así un usuario que ya
+  // tenía sesión puede sumar calendar.readonly sin re-consentir todo.
   u.searchParams.set("access_type", "offline");
+  u.searchParams.set("include_granted_scopes", "true");
   u.searchParams.set("prompt", "select_account");
   u.searchParams.set("state", state);
   return u.toString();
@@ -48,7 +53,7 @@ export async function exchangeCodeForToken(
   env: GoogleEnv,
   code: string,
   callbackUrl: string,
-): Promise<{ accessToken: string }> {
+): Promise<{ accessToken: string; refreshToken: string | null }> {
   const { clientId, clientSecret } = requireEnv(env);
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -64,8 +69,36 @@ export async function exchangeCodeForToken(
   if (!res.ok) {
     throw new Error(`Google token exchange failed: ${res.status} ${await res.text()}`);
   }
-  const data = (await res.json()) as { access_token: string };
-  return { accessToken: data.access_token };
+  const data = (await res.json()) as {
+    access_token: string;
+    refresh_token?: string;
+  };
+  return { accessToken: data.access_token, refreshToken: data.refresh_token ?? null };
+}
+
+export async function refreshAccessToken(
+  env: GoogleEnv,
+  refreshToken: string,
+): Promise<{ accessToken: string; expiresIn: number }> {
+  const { clientId, clientSecret } = requireEnv(env);
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      refresh_token: refreshToken,
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "refresh_token",
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Google token refresh failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as {
+    access_token: string;
+    expires_in: number;
+  };
+  return { accessToken: data.access_token, expiresIn: data.expires_in };
 }
 
 export async function fetchGoogleProfile(accessToken: string): Promise<GoogleProfile> {
