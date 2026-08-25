@@ -102,10 +102,34 @@ resource "null_resource" "d1_migrate" {
   }
 
   provisioner "local-exec" {
+    # ponytail: D1 (SQLite) no soporta `ALTER TABLE ADD COLUMN IF NOT EXISTS`,
+    # así que las migraciones 0002/0003 no son idempotentes por sí solas.
+    # El wrapper chequea `pragma_table_info` antes de aplicar cada una.
     command = <<-EOT
-      npx wrangler d1 execute ${var.d1_database_name} --remote --file=${path.module}/../apps/api/migrations/0001_init.sql &&
-      npx wrangler d1 execute ${var.d1_database_name} --remote --file=${path.module}/../apps/api/migrations/0002_task_links.sql &&
-      npx wrangler d1 execute ${var.d1_database_name} --remote --file=${path.module}/../apps/api/migrations/0003_google_refresh_token.sql
+      set -e
+      DB=${var.d1_database_name}
+
+      npx wrangler d1 execute $DB --remote --file=${path.module}/../apps/api/migrations/0001_init.sql
+
+      HAS_DEPS=$(npx wrangler d1 execute $DB --remote --json \
+        --command "SELECT count(*) AS c FROM pragma_table_info('tasks') WHERE name='depends_on';" \
+        | jq -r '.[0].results[0].c')
+      if [ "$HAS_DEPS" = "0" ]; then
+        echo "Applying 0002_task_links.sql..."
+        npx wrangler d1 execute $DB --remote --file=${path.module}/../apps/api/migrations/0002_task_links.sql
+      else
+        echo "0002_task_links.sql already applied; skipping."
+      fi
+
+      HAS_GRT=$(npx wrangler d1 execute $DB --remote --json \
+        --command "SELECT count(*) AS c FROM pragma_table_info('users') WHERE name='google_refresh_token';" \
+        | jq -r '.[0].results[0].c')
+      if [ "$HAS_GRT" = "0" ]; then
+        echo "Applying 0003_google_refresh_token.sql..."
+        npx wrangler d1 execute $DB --remote --file=${path.module}/../apps/api/migrations/0003_google_refresh_token.sql
+      else
+        echo "0003_google_refresh_token.sql already applied; skipping."
+      fi
     EOT
     environment = {
       CLOUDFLARE_API_TOKEN  = var.cloudflare_api_token
