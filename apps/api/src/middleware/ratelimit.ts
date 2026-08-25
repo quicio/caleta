@@ -3,10 +3,12 @@
 // dentro de la ventana.
 
 import type { Context, MiddlewareHandler } from "hono";
+import { log } from "../lib/log.ts";
+import type { AppVariables } from "../lib/variables.ts";
 
 export interface RateLimitEnv {
   Bindings: { RATE_LIMIT?: KVNamespace } & Record<string, unknown>;
-  Variables: { user?: { sub: string; email: string } };
+  Variables: AppVariables & { user?: { sub: string; email: string } };
 }
 
 export interface RateLimitOpts {
@@ -39,6 +41,13 @@ export function rateLimit(opts: RateLimitOpts): MiddlewareHandler<RateLimitEnv> 
       // como fallback y dejamos Retry-After >=1.
       const retry = opts.windowSec;
       c.header("Retry-After", String(retry));
+      log.warn("rate_limit_exceeded", {
+        request_id: c.get("request_id") as string | undefined,
+        route: opts.route,
+        scope_id: id,
+        limit: opts.limit,
+        window_sec: opts.windowSec,
+      });
       return c.json({ error: "rate limit exceeded" }, 429);
     }
     const nextCount = count + 1;

@@ -7,6 +7,7 @@ import { requireAuth, type AuthEnv } from "../middleware/auth.ts";
 import { getStorageProvider } from "../storage/index.ts";
 import { refreshAccessToken, type GoogleEnv } from "../auth/google.ts";
 import { ipScope, rateLimit } from "../middleware/ratelimit.ts";
+import { log } from "../lib/log.ts";
 
 type Bindings = {
   DB: D1Database;
@@ -140,6 +141,7 @@ calendarRoutes.get(
 
     const provider = getStorageProvider(c.env);
     const user = c.get("user");
+    if (!user) return c.json({ error: "missing session" }, 401);
     const userId = user.sub;
     void provider; // el provider no se usa acá; leemos directo de DB
     // upsertUser no expone googleRefreshToken en la firma; leemos directo de DB.
@@ -168,7 +170,11 @@ calendarRoutes.get(
       if (status === 403) {
         return c.json({ error: "calendar_scope_missing" }, 403);
       }
-      console.error("Calendar fetch failed", e);
+      log.error("calendar_fetch_failed", {
+        request_id: c.get("request_id"),
+        user_id: userId,
+        message: e instanceof Error ? e.message : String(e),
+      });
       return c.json({ error: "calendar fetch failed" }, 502);
     }
   },

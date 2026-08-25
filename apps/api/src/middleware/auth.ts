@@ -5,9 +5,11 @@
 import type { Context, MiddlewareHandler } from "hono";
 import { SESSION_COOKIE, buildSessionCookie, readCookie } from "../auth/cookies.ts";
 import { verifyAndRefresh, type JwtEnv, REFRESH_THRESHOLD_SEC } from "../auth/jwt.ts";
+import { log } from "../lib/log.ts";
+import type { AppVariables } from "../lib/variables.ts";
 
 export type AuthEnv = {
-  Variables: { user: { sub: string; email: string } };
+  Variables: AppVariables & { user: { sub: string; email: string } };
   Bindings: JwtEnv & Record<string, unknown>;
 };
 
@@ -47,6 +49,10 @@ async function readSession(
 export const requireAuth: MiddlewareHandler<AuthEnv> = async (c, next) => {
   const session = await readSession(c, c.env);
   if (!session) {
+    log.warn("auth_failed", {
+      request_id: c.get("request_id"),
+      path: c.req.path,
+    });
     return c.json({ error: "Missing or invalid session" }, 401);
   }
   c.set("user", { sub: session.claims.sub, email: session.claims.email });
@@ -59,6 +65,7 @@ export const requireAuth: MiddlewareHandler<AuthEnv> = async (c, next) => {
   }
 };
 
-export function authedUser(c: Context<AuthEnv>): { sub: string; email: string } {
-  return c.get("user");
+export function authedUser(c: Context<{ Variables: { user: { sub: string; email: string } } }>): { sub: string; email: string } {
+  const u = c.get("user");
+  return u;
 }
