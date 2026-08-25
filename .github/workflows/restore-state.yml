@@ -39,7 +39,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 
       - name: Import D1
-        run: terraform -chdir=infra import cloudflare_d1_database.caleta 9659344f-86a9-430e-bacd-8eb421c46ee7
+        run: terraform -chdir=infra import cloudflare_d1_database.caleta "${{ secrets.CF_ACCOUNT_ID }}/9659344f-86a9-430e-bacd-8eb421c46ee7"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
