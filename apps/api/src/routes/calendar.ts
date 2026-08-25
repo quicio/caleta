@@ -99,6 +99,15 @@ async function fetchCalendarEvents(
       (err as Error & { status?: number }).status = 401;
       throw err;
     }
+    if (res.status === 403) {
+      const body = await res.text();
+      // "Insufficient Permission" o "Access Not Configured" — generalmente
+      // significa que el refresh_token no tiene calendar.readonly. Forzamos
+      // re-consent para que el usuario otorgue el scope.
+      const err = new Error(`insufficient_scope: ${body.slice(0, 200)}`);
+      (err as Error & { status?: number }).status = 403;
+      throw err;
+    }
     if (!res.ok) {
       throw new Error(`Google Calendar API failed: ${res.status} ${await res.text()}`);
     }
@@ -155,6 +164,9 @@ calendarRoutes.get(
       const status = (e as Error & { status?: number }).status;
       if (status === 401) {
         return c.json({ error: "google_reauth_required" }, 401);
+      }
+      if (status === 403) {
+        return c.json({ error: "calendar_scope_missing" }, 403);
       }
       console.error("Calendar fetch failed", e);
       return c.json({ error: "calendar fetch failed" }, 502);

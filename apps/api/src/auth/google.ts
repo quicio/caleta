@@ -39,12 +39,14 @@ export function buildAuthRedirectUrl(
     "scope",
     "openid email profile https://www.googleapis.com/auth/calendar.readonly",
   );
-  // ponytail: include_granted_scopes=true hace que Google reuse scopes ya
-  // otorgados y muestre solo los nuevos en el consent. Así un usuario que ya
-  // tenía sesión puede sumar calendar.readonly sin re-consentir todo.
+  // ponytail: prompt=consent fuerza a Google a re-emitir un refresh_token con
+  // el union de scopes. Sin esto, Google puede devolver el refresh_token viejo
+  // (sin calendar.readonly) y las llamadas a Calendar API fallan con
+  // insufficient scope. Tradeoff: pantalla de consentimiento en cada login,
+  // aceptable para uso personal.
   u.searchParams.set("access_type", "offline");
   u.searchParams.set("include_granted_scopes", "true");
-  u.searchParams.set("prompt", "select_account");
+  u.searchParams.set("prompt", "consent");
   u.searchParams.set("state", state);
   return u.toString();
 }

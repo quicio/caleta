@@ -76,7 +76,8 @@
       events = res.events;
     } catch (e) {
       if (e instanceof ApiError && e.status === 403) {
-        error = "not_connected";
+        const body = (e.body as { error?: string } | null)?.error;
+        error = body === "calendar_scope_missing" ? "scope_missing" : "not_connected";
       } else if (e instanceof ApiError && e.status === 401) {
         error = "reauth_required";
       } else {
@@ -144,6 +145,12 @@
       >
         Reconectar Google
       </a>
+    </section>
+  {:else if error === "scope_missing"}
+    <section class="panel mt-8 rounded-xl border border-rose-900/50 bg-surface p-6 text-center">
+      <p class="text-sm text-ink-0">Tu sesión anterior no incluye permiso de lectura del calendario.</p>
+      <p class="mt-2 text-xs text-mist">Volvé a conectar para otorgar el nuevo permiso.</p>
+      <a class="btn-primary mt-5 inline-flex" href={authLoginUrl()}>Reconectar Google</a>
     </section>
   {:else if error === "reauth_required"}
     <section class="panel mt-8 rounded-xl border border-rose-900/50 bg-surface p-6 text-center">
