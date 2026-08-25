@@ -32,7 +32,7 @@ app.use("*", async (c, next) => {
   if (origin && origin === webUrl) {
     c.res.headers.set("Access-Control-Allow-Origin", origin);
     c.res.headers.set("Vary", "Origin");
-    c.res.headers.set("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+    c.res.headers.set("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
     c.res.headers.set("Access-Control-Allow-Headers", "authorization, content-type");
     c.res.headers.set("Access-Control-Allow-Credentials", "true");
   }
