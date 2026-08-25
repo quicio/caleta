@@ -71,6 +71,11 @@ export interface UpdateTaskPatch {
   listId?: string;
 }
 
+// Settings genéricos por usuario: un JSON object plano de key->valor.
+// Se hacen merge por patch en cada update; el contrato exacto de cada key lo
+// define la ruta que la consume (ver routes/settings.ts y calendar.ts).
+export type UserSettings = Record<string, unknown>;
+
 export interface SyncSnapshot {
   lists: List[];
   tasks: Task[];
@@ -87,6 +92,10 @@ export interface StorageProvider {
     googleRefreshToken?: string | null;
   }): Promise<User>;
   saveGoogleRefreshToken(userId: string, refreshToken: string | null): Promise<void>;
+
+  // --- settings ---
+  getSettings(userId: string): Promise<UserSettings>;
+  updateSettings(userId: string, patch: UserSettings): Promise<UserSettings>;
 
   // --- lists ---
   createList(userId: string, input: CreateListInput): Promise<List>;

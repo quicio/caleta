@@ -6,6 +6,7 @@ import { authRoutes } from "./routes/auth.ts";
 import { calendarRoutes } from "./routes/calendar.ts";
 import { listRoutes } from "./routes/lists.ts";
 import { meRoutes } from "./routes/me.ts";
+import { settingsRoutes } from "./routes/settings.ts";
 import { syncRoutes } from "./routes/sync.ts";
 import { taskRoutes } from "./routes/tasks.ts";
 import { logger, type LoggerEnv } from "./middleware/logger.ts";
@@ -60,6 +61,7 @@ app.route("/", listRoutes);
 app.route("/", taskRoutes);
 app.route("/", syncRoutes);
 app.route("/", calendarRoutes);
+app.route("/", settingsRoutes);
 
 app.notFound((c) => c.json({ error: "not found" }, 404));
 app.onError((e, c) => {

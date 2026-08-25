@@ -13,6 +13,7 @@
     { id: "lista", label: "Lista", icon: "list" },
     { id: "calendario", label: "Calendario", icon: "calendar" },
     { id: "mapa", label: "Mapa", icon: "flag" },
+    { id: "configuracion", label: "Config", icon: "settings" },
   ];
 </script>
 

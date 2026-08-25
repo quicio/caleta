@@ -111,4 +111,15 @@ export const api = {
     const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
     return call({ method: "GET", path: `/api/calendar/events${qs}` });
   },
+  getSettings(): Promise<{
+    settings: { selectedCalendars?: string[] };
+    calendars: Array<{ id: string; summary: string }> | null;
+  }> {
+    return call({ method: "GET", path: "/api/settings" });
+  },
+  updateSettings(settings: { selectedCalendars?: string[] }): Promise<{
+    settings: { selectedCalendars?: string[] };
+  }> {
+    return call({ method: "PUT", path: "/api/settings", body: { settings } });
+  },
 };

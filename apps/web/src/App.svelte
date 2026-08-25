@@ -8,6 +8,7 @@
   import TaskList from "./routes/TaskList.svelte";
   import Mapa from "./routes/Mapa.svelte";
   import Calendario from "./routes/Calendario.svelte";
+  import Configuracion from "./routes/Configuracion.svelte";
   import NavPlaceholder from "./routes/NavPlaceholder.svelte";
   import Sidebar from "./lib/ui/Sidebar.svelte";
   import BottomNav from "./lib/ui/BottomNav.svelte";
@@ -35,6 +36,8 @@
       if (router.pathname !== "/mapa") navigate("/mapa");
     } else if (v === "calendario") {
       if (router.pathname !== "/calendario") navigate("/calendario");
+    } else if (v === "configuracion") {
+      if (router.pathname !== "/configuracion") navigate("/configuracion");
     } else {
       if (router.pathname !== "/") navigate("/");
     }
@@ -108,6 +111,7 @@
         <Route path="/" component={Home} view={view} onViewChange={selectView} />
         <Route path="/mapa" component={Mapa} />
         <Route path="/calendario" component={Calendario} />
+        <Route path="/configuracion" component={Configuracion} />
         <Route path="/lists/:id" component={TaskList} />
         <Route path="/nav/:id" component={NavPlaceholder} />
       </Router>

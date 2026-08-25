@@ -73,26 +73,33 @@ async function fetchCalendarEvents(
   refreshToken: string,
   from: string,
   to: string,
+  selectedCalendars: Set<string> | null,
 ): Promise<NormalizedEvent[]> {
   const { accessToken } = await refreshAccessToken(env, refreshToken);
-  const url = new URL(
-    "https://www.googleapis.com/calendar/v3/calendars/primary/events",
-  );
-  url.searchParams.set("timeMin", from);
-  url.searchParams.set("timeMax", to);
-  url.searchParams.set("singleEvents", "true");
-  url.searchParams.set("orderBy", "startTime");
-  url.searchParams.set("maxResults", "250");
+  const calRes = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const calData = (await calRes.json()) as {
+    items?: Array<{ id: string; summary?: string }>;
+  };
 
   const out: NormalizedEvent[] = [];
-  let nextPageToken: string | null = null;
-  // ponytail: Google pagina con nextPageToken. Tope de 5 páginas para no abusar;
-  // 250 * 5 = 1250 eventos por request, suficiente para uso personal.
-  let pages = 0;
-  do {
-    const u = new URL(url.toString());
-    if (nextPageToken) u.searchParams.set("pageToken", nextPageToken);
-    const res = await fetch(u.toString(), {
+  const seen = new Set<string>();
+  for (const cal of calData.items ?? []) {
+    // selectedCalendars null o vacío = mostrar todos. Si hay selección, saltar
+    // los calendarios no elegidos.
+    if (selectedCalendars && selectedCalendars.size > 0 && !selectedCalendars.has(cal.id)) {
+      continue;
+    }
+    const url = new URL(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events`,
+    );
+    url.searchParams.set("timeMin", from);
+    url.searchParams.set("timeMax", to);
+    url.searchParams.set("singleEvents", "true");
+    url.searchParams.set("orderBy", "startTime");
+    url.searchParams.set("maxResults", "250");
+    const res = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (res.status === 401) {
@@ -102,19 +109,12 @@ async function fetchCalendarEvents(
     }
     if (res.status === 403) {
       const body = await res.text();
-      // 403 de Calendar API puede significar varias cosas distintas:
-      //  - "insufficient permission": el refresh_token no trae calendar.readonly
-      //    → el usuario debe re-consentir (prompt=consent ya lo fuerza).
-      //  - "accessNotConfigured": la Calendar API no está habilitada en el
-      //    proyecto de Google Cloud de este OAuth client → nada que reconectar
-      //    lo arregla; hay que activarla en la consola de GCP.
       const reason = (() => {
         try {
           const j = JSON.parse(body) as {
             error?: { message?: string; errors?: Array<{ reason?: string }> };
           };
-          const r = j.error?.errors?.[0]?.reason;
-          return r ?? j.error?.message?.slice(0, 80) ?? "unknown";
+          return j.error?.errors?.[0]?.reason ?? j.error?.message?.slice(0, 80) ?? "unknown";
         } catch {
           return body.slice(0, 80) || "unknown";
         }
@@ -127,14 +127,15 @@ async function fetchCalendarEvents(
     if (!res.ok) {
       throw new Error(`Google Calendar API failed: ${res.status} ${await res.text()}`);
     }
-    const data = (await res.json()) as { items?: GcalEvent[]; nextPageToken?: string };
+    const data = (await res.json()) as { items?: GcalEvent[] };
     for (const ev of data.items ?? []) {
       const n = normalize(ev);
-      if (n) out.push(n);
+      if (n && !seen.has(n.id)) {
+        seen.add(n.id);
+        out.push(n);
+      }
     }
-    nextPageToken = data.nextPageToken ?? null;
-    pages++;
-  } while (nextPageToken && pages < 5);
+  }
 
   return out;
 }
@@ -158,7 +159,6 @@ calendarRoutes.get(
     const user = c.get("user");
     if (!user) return c.json({ error: "missing session" }, 401);
     const userId = user.sub;
-    void provider; // el provider no se usa acá; leemos directo de DB
     // upsertUser no expone googleRefreshToken en la firma; leemos directo de DB.
     const row = await c.env.DB
       .prepare(`SELECT google_refresh_token FROM users WHERE id = ?1`)
@@ -169,12 +169,20 @@ calendarRoutes.get(
       return c.json({ error: "calendar not connected" }, 403);
     }
 
+    // Filtro por calendarios seleccionados en Configuración (settings).
+    const settings = await provider.getSettings(userId);
+    const selected = settings.selectedCalendars;
+    const selectedCalendars = Array.isArray(selected)
+      ? new Set<string>(selected.filter((s): s is string => typeof s === "string"))
+      : null;
+
     try {
       const events = await fetchCalendarEvents(
         c.env,
         refreshToken,
         fromDate.toISOString(),
         toDate.toISOString(),
+        selectedCalendars,
       );
       return c.json({ events });
     } catch (e) {

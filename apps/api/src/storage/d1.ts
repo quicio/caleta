@@ -14,6 +14,7 @@ import type {
   UpdateListPatch,
   UpdateTaskPatch,
   User,
+  UserSettings,
 } from "./types.ts";
 
 type D1Exec = D1PreparedStatement;
@@ -127,6 +128,36 @@ export class D1Provider implements StorageProvider {
       .prepare(`UPDATE users SET google_refresh_token = ?1, updated_at = ?2 WHERE id = ?3`)
       .bind(refreshToken, now, userId)
       .run();
+  }
+
+  async getSettings(userId: string): Promise<UserSettings> {
+    const row = await this.db
+      .prepare(`SELECT settings FROM user_settings WHERE user_id = ?1`)
+      .bind(userId)
+      .first();
+    if (!row) return {};
+    try {
+      return JSON.parse(row.settings as string) as UserSettings;
+    } catch {
+      return {};
+    }
+  }
+
+  async updateSettings(userId: string, patch: UserSettings): Promise<UserSettings> {
+    const now = isoNow();
+    const current = await this.getSettings(userId);
+    const merged = { ...current, ...patch };
+    await this.db
+      .prepare(
+        `INSERT INTO user_settings (user_id, settings, updated_at)
+         VALUES (?1, ?2, ?3)
+         ON CONFLICT(user_id) DO UPDATE SET
+           settings = excluded.settings,
+           updated_at = excluded.updated_at`,
+      )
+      .bind(userId, JSON.stringify(merged), now)
+      .run();
+    return merged;
   }
 
   async createList(userId: string, input: CreateListInput): Promise<List> {

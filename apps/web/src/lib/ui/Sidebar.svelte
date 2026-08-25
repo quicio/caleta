@@ -26,6 +26,7 @@
     { id: "lista", label: "Lista" },
     { id: "calendario", label: "Calendario" },
     { id: "mapa", label: "Mapa" },
+    { id: "configuracion", label: "Configuración" },
   ];
 
   const initials = userName
