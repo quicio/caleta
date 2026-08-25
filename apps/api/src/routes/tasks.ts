@@ -64,6 +64,8 @@ taskRoutes.patch("/api/tasks/:id", async (c) => {
     dueAt?: string | null;
     completed?: boolean;
     deletedAt?: string | null;
+    dependsOn?: string | null;
+    priority?: "normal" | "high";
   } = {};
   if (typeof body.title === "string") {
     const trimmed = body.title.trim();
@@ -83,6 +85,14 @@ taskRoutes.patch("/api/tasks/:id", async (c) => {
     patch.dueAt = typeof body.due_at === "string" ? body.due_at : null;
   }
   if (typeof body.completed === "boolean") patch.completed = body.completed;
+  if (Object.prototype.hasOwnProperty.call(body, "depends_on")) {
+    if (body.depends_on === null || typeof body.depends_on === "string") {
+      patch.dependsOn = (body.depends_on as string | null) ?? null;
+    }
+  }
+  if (body.priority === "high" || body.priority === "normal") {
+    patch.priority = body.priority;
+  }
   const provider = getStorageProvider(c.env);
   const updated = await provider.updateTask(c.get("user").sub, c.req.param("id"), patch);
   return updated ? c.json(updated) : c.json({ error: "not found" }, 404);

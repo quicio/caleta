@@ -21,10 +21,9 @@
   } = $props();
 
   const views = [
-    { id: "today", label: "Hoy" },
-    { id: "upcoming", label: "Próximos" },
-    { id: "someday", label: "Algún día" },
-    { id: "done", label: "Hechos" },
+    { id: "lista", label: "Lista" },
+    { id: "calendario", label: "Calendario" },
+    { id: "mapa", label: "Mapa" },
   ];
 
   const initials = userName
@@ -39,7 +38,7 @@
   class="panel hidden w-[270px] shrink-0 flex-col border-r border-surface-2/60 lg:flex"
 >
   <div class="px-6 pb-7 pt-8">
-    <button type="button" onclick={() => onSelect("today")} class="cursor-pointer">
+    <button type="button" onclick={() => onSelect("lista")} class="cursor-pointer">
       <Wordmark />
     </button>
   </div>

@@ -6,6 +6,7 @@
   import Callback from "./routes/Callback.svelte";
   import Home from "./routes/Home.svelte";
   import TaskList from "./routes/TaskList.svelte";
+  import Mapa from "./routes/Mapa.svelte";
   import NavPlaceholder from "./routes/NavPlaceholder.svelte";
   import Sidebar from "./lib/ui/Sidebar.svelte";
   import BottomNav from "./lib/ui/BottomNav.svelte";
@@ -18,7 +19,7 @@
 
   let authed = $state(false);
   let authLoading = $state(true);
-  let view = $state("today");
+  let view = $state("lista");
   let mobileNav = $state("tasks");
   let lists = $state<ApiList[]>([]);
   let userEmail = $state("");
@@ -31,17 +32,28 @@
 
   function selectView(v: string) {
     view = v;
-    if (router.pathname !== "/") navigate("/");
+    if (v === "mapa") {
+      if (router.pathname !== "/mapa") navigate("/mapa");
+    } else if (v === "calendario") {
+      if (router.pathname !== "/nav/calendario") navigate("/nav/calendario");
+    } else {
+      if (router.pathname !== "/") navigate("/");
+    }
   }
 
   function selectProject(id: string) {
+    view = "lista";
     navigate(`/lists/${id}`);
   }
 
   function selectMobileNav(v: string) {
     mobileNav = v;
     if (v === "tasks") {
+      view = "lista";
       if (router.pathname !== "/") navigate("/");
+    } else if (v === "map") {
+      view = "mapa";
+      if (router.pathname !== "/mapa") navigate("/mapa");
     } else {
       navigate(`/nav/${v}`);
     }
@@ -84,7 +96,7 @@
       onSelect={selectView}
       onProject={selectProject}
       onNew={() => {
-        selectView("today");
+        selectView("lista");
         navigate("/");
       }}
       onLogout={async () => {
@@ -99,6 +111,7 @@
       <Tabs active={view} onSelect={selectView} />
       <Router>
         <Route path="/" component={Home} view={view} onViewChange={selectView} />
+        <Route path="/mapa" component={Mapa} />
         <Route path="/lists/:id" component={TaskList} />
         <Route path="/nav/:id" component={NavPlaceholder} />
       </Router>

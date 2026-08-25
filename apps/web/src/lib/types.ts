@@ -19,6 +19,8 @@ export interface ApiTask {
   dueAt: string | null;
   completed: boolean;
   deletedAt: string | null;
+  dependsOn: string | null;
+  priority: "normal" | "high";
   createdAt: string;
   updatedAt: string;
 }

@@ -8,10 +8,9 @@
   } = $props();
 
   const tabs = [
-    { id: "today", label: "Hoy" },
-    { id: "upcoming", label: "Próximos" },
-    { id: "someday", label: "Algún día" },
-    { id: "done", label: "Hechos" },
+    { id: "lista", label: "Lista" },
+    { id: "calendario", label: "Calendario" },
+    { id: "mapa", label: "Mapa" },
   ];
 </script>
 

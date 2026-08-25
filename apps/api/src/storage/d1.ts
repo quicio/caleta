@@ -59,6 +59,8 @@ function rowToTask(row: Record<string, unknown>): Task {
     dueAt: (row.due_at as string) ?? null,
     completed: Boolean(row.completed),
     deletedAt: (row.deleted_at as string) ?? null,
+    dependsOn: (row.depends_on as string) ?? null,
+    priority: ((row.priority as string) ?? "normal") === "high" ? "high" : "normal",
     createdAt: isoDate(row.created_at as string),
     updatedAt: isoDate(row.updated_at as string),
   };
@@ -209,8 +211,8 @@ export class D1Provider implements StorageProvider {
     await this.db
       .prepare(
         `INSERT INTO tasks
-           (id, list_id, user_id, title, description, due_at, completed, deleted_at, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
+           (id, list_id, user_id, title, description, due_at, completed, deleted_at, depends_on, priority, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`,
       )
       .bind(
         id,
@@ -221,6 +223,8 @@ export class D1Provider implements StorageProvider {
         input.dueAt ?? null,
         input.completed ? 1 : 0,
         input.deletedAt ?? null,
+        (input as { dependsOn?: string | null }).dependsOn ?? null,
+        ((input as { priority?: string }).priority ?? "normal") === "high" ? "high" : "normal",
         createdAt,
         now,
       )
@@ -295,6 +299,14 @@ export class D1Provider implements StorageProvider {
     if (patch.deletedAt !== undefined) {
       sets.push(`deleted_at = ?${i++}`);
       values.push(patch.deletedAt);
+    }
+    if (patch.dependsOn !== undefined) {
+      sets.push(`depends_on = ?${i++}`);
+      values.push(patch.dependsOn);
+    }
+    if (patch.priority !== undefined) {
+      sets.push(`priority = ?${i++}`);
+      values.push(patch.priority === "high" ? "high" : "normal");
     }
     if (sets.length === 0) return this.getTask(userId, taskId);
     sets.push(`updated_at = ?${i++}`);
@@ -395,14 +407,16 @@ export class D1Provider implements StorageProvider {
       await this.db
         .prepare(
           `INSERT INTO tasks
-             (id, list_id, user_id, title, description, due_at, completed, deleted_at, created_at, updated_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+             (id, list_id, user_id, title, description, due_at, completed, deleted_at, depends_on, priority, created_at, updated_at)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
            ON CONFLICT(id) DO UPDATE SET
              title = excluded.title,
              description = excluded.description,
              due_at = excluded.due_at,
              completed = excluded.completed,
              deleted_at = excluded.deleted_at,
+             depends_on = excluded.depends_on,
+             priority = excluded.priority,
              updated_at = excluded.updated_at`,
         )
         .bind(
@@ -414,6 +428,8 @@ export class D1Provider implements StorageProvider {
           t.dueAt ?? null,
           t.completed ? 1 : 0,
           t.deletedAt ?? null,
+          (t as { dependsOn?: string | null }).dependsOn ?? null,
+          ((t as { priority?: string }).priority ?? "normal") === "high" ? "high" : "normal",
           createdAt,
           now,
         )

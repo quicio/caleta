@@ -9,7 +9,8 @@
 
   let {
     view,
-  }: { view: string } = $props();
+    onViewChange,
+  }: { view: string; onViewChange?: (v: string) => void } = $props();
 
   let lists = $state<ApiList[]>([]);
   let tasks = $state<ApiTask[]>([]);
@@ -18,6 +19,7 @@
   let newTitle = $state("");
   let newDue = $state("");
   let showQuick = $state(false);
+  let filter = $state("today");
 
   async function refresh() {
     try {
@@ -61,7 +63,7 @@
     lists.find((l) => l.id === id)?.name ?? "";
 
   const filtered = $derived.by(() => {
-    switch (view) {
+    switch (filter) {
       case "upcoming":
         return tasks.filter(
           (t) => !t.completed && t.dueAt && !isToday(t.dueAt) && new Date(t.dueAt) > new Date(),
@@ -76,12 +78,19 @@
     }
   });
 
-  const titleMap: Record<string, string> = {
+  const filterTitle: Record<string, string> = {
     today: "Hoy",
     upcoming: "Próximos",
     someday: "Algún día",
     done: "Hechos",
   };
+
+  const filters = [
+    { id: "today", label: "Hoy" },
+    { id: "upcoming", label: "Próximos" },
+    { id: "someday", label: "Algún día" },
+    { id: "done", label: "Hechos" },
+  ];
 
   onMount(refresh);
 </script>
@@ -90,7 +99,7 @@
   <header class="relative z-10 flex flex-wrap items-end justify-between gap-4">
     <div>
       <p class="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-lime/75">Tu caleta</p>
-      <h1 class="text-4xl font-bold tracking-[-0.06em] sm:text-5xl">{titleMap[view] ?? "Hoy"}</h1>
+      <h1 class="text-4xl font-bold tracking-[-0.06em] sm:text-5xl">{filterTitle[filter] ?? "Hoy"}</h1>
       <p class="mt-2 font-mono text-[11px] tracking-wide text-mist">
         {todayLabel()}
       </p>
@@ -105,6 +114,18 @@
       </button>
     </div>
   </header>
+
+  <nav class="relative z-10 mt-5 flex gap-1 border-b border-surface-2/60">
+    {#each filters as f (f.id)}
+      <button
+        type="button"
+        onclick={() => (filter = f.id)}
+        class="cursor-pointer whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors duration-150 {filter === f.id ? 'border-lime text-ink-0' : 'border-transparent text-mist hover:text-ink-0'}"
+      >
+        {f.label}
+      </button>
+    {/each}
+  </nav>
 
   {#if showQuick}
     <form onsubmit={createTask} class="panel relative z-10 mt-7 rounded-xl border border-surface-2 bg-surface p-4">
@@ -134,12 +155,12 @@
   {:else if filtered.length === 0}
     <EmptyState
       title="Aún no hay tareas por aquí."
-      copy={view === "done"
+      copy={filter === "done"
         ? "Todavía no completaste ninguna."
         : "Tómate un respiro o crea tu primera tarea."}
     >
       {#snippet action()}
-        {#if view !== "done"}
+        {#if filter !== "done"}
           <button type="button" class="btn-primary" onclick={() => (showQuick = true)}>
             <Icon name="plus" size={14} strokeWidth={2} />
             Crear tarea

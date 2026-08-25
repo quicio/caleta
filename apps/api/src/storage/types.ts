@@ -28,6 +28,8 @@ export interface Task {
   dueAt: string | null;
   completed: boolean;
   deletedAt: string | null;
+  dependsOn: string | null;
+  priority: "normal" | "high";
   createdAt: string;
   updatedAt: string;
 }
@@ -63,6 +65,8 @@ export interface UpdateTaskPatch {
   dueAt?: string | null;
   completed?: boolean;
   deletedAt?: string | null;
+  dependsOn?: string | null;
+  priority?: "normal" | "high";
 }
 
 export interface SyncSnapshot {
