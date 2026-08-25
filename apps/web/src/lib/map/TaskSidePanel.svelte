@@ -5,6 +5,7 @@
   let {
     task,
     list,
+    lists,
     allTasks,
     onClose,
     onComplete,
@@ -14,6 +15,7 @@
   }: {
     task: ApiTask | null;
     list: ApiList | null;
+    lists: ApiList[];
     allTasks: ApiTask[];
     onClose: () => void;
     onComplete: (t: ApiTask) => void;
@@ -23,6 +25,7 @@
       description?: string | null;
       dueAt?: string | null;
       priority?: "normal" | "high";
+      listId?: string;
     }) => Promise<void>;
     focusActive: boolean;
   } = $props();
@@ -33,6 +36,7 @@
   let editDescription = $state("");
   let editDue = $state("");
   let editPriority = $state<"normal" | "high">("normal");
+  let editListId = $state("");
 
   $effect(() => {
     if (task && !editing) {
@@ -40,6 +44,7 @@
       editDescription = task.description ?? "";
       editDue = task.dueAt ? toLocal(task.dueAt) : "";
       editPriority = task.priority;
+      editListId = task.listId;
     }
   });
 
@@ -60,6 +65,7 @@
     editDescription = task.description ?? "";
     editDue = task.dueAt ? toLocal(task.dueAt) : "";
     editPriority = task.priority;
+    editListId = task.listId;
     editing = true;
   }
 
@@ -80,6 +86,7 @@
       const dueIso = fromLocal(editDue);
       if ((dueIso ?? null) !== (task.dueAt ?? null)) patch.dueAt = dueIso;
       if (editPriority !== task.priority) patch.priority = editPriority;
+      if (editListId && editListId !== task.listId) patch.listId = editListId;
       if (Object.keys(patch).length === 0) {
         editing = false;
         return;
@@ -168,6 +175,17 @@
               quitar fecha
             </button>
           {/if}
+        </section>
+
+        <section>
+          <label class="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.18em] text-mist/55" for="edit-list">
+            Proyecto
+          </label>
+          <select id="edit-list" class="input" bind:value={editListId} disabled={saving}>
+            {#each lists as l (l.id)}
+              <option value={l.id}>{l.name}</option>
+            {/each}
+          </select>
         </section>
 
         <section>

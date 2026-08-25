@@ -67,6 +67,7 @@ export interface UpdateTaskPatch {
   deletedAt?: string | null;
   dependsOn?: string | null;
   priority?: "normal" | "high";
+  listId?: string;
 }
 
 export interface SyncSnapshot {

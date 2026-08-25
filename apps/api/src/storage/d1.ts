@@ -308,6 +308,10 @@ export class D1Provider implements StorageProvider {
       sets.push(`priority = ?${i++}`);
       values.push(patch.priority === "high" ? "high" : "normal");
     }
+    if (patch.listId !== undefined) {
+      sets.push(`list_id = ?${i++}`);
+      values.push(patch.listId);
+    }
     if (sets.length === 0) return this.getTask(userId, taskId);
     sets.push(`updated_at = ?${i++}`);
     values.push(now);
