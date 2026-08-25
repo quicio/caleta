@@ -10,10 +10,9 @@
   } = $props();
 
   const tabs = [
-    { id: "tasks", label: "Tareas", icon: "list" },
-    { id: "calendar", label: "Calendario", icon: "calendar" },
-    { id: "activity", label: "Actividad", icon: "activity" },
-    { id: "settings", label: "Ajustes", icon: "settings" },
+    { id: "lista", label: "Lista", icon: "list" },
+    { id: "calendario", label: "Calendario", icon: "calendar" },
+    { id: "mapa", label: "Mapa", icon: "flag" },
   ];
 </script>
 

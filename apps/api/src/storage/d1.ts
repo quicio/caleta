@@ -33,6 +33,7 @@ function rowToUser(row: Record<string, unknown>): User {
     email: row.email as string,
     name: (row.name as string) ?? null,
     pictureUrl: (row.picture_url as string) ?? null,
+    googleRefreshToken: (row.google_refresh_token as string) ?? null,
     createdAt: isoDate(row.created_at as string),
     updatedAt: isoDate(row.updated_at as string),
   };
@@ -85,22 +86,47 @@ export class D1Provider implements StorageProvider {
     email: string;
     name: string | null;
     pictureUrl: string | null;
+    googleRefreshToken?: string | null;
   }): Promise<User> {
     const now = isoNow();
-    await this.db
-      .prepare(
-        `INSERT INTO users (id, email, name, picture_url, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5)
-         ON CONFLICT(id) DO UPDATE SET
-           email = excluded.email,
-           name = excluded.name,
-           picture_url = excluded.picture_url,
-           updated_at = excluded.updated_at`,
-      )
-      .bind(input.id, input.email, input.name, input.pictureUrl, now)
-      .run();
+    if (input.googleRefreshToken !== undefined && input.googleRefreshToken !== null) {
+      await this.db
+        .prepare(
+          `INSERT INTO users (id, email, name, picture_url, google_refresh_token, updated_at)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+           ON CONFLICT(id) DO UPDATE SET
+             email = excluded.email,
+             name = excluded.name,
+             picture_url = excluded.picture_url,
+             google_refresh_token = excluded.google_refresh_token,
+             updated_at = excluded.updated_at`,
+        )
+        .bind(input.id, input.email, input.name, input.pictureUrl, input.googleRefreshToken, now)
+        .run();
+    } else {
+      await this.db
+        .prepare(
+          `INSERT INTO users (id, email, name, picture_url, updated_at)
+           VALUES (?1, ?2, ?3, ?4, ?5)
+           ON CONFLICT(id) DO UPDATE SET
+             email = excluded.email,
+             name = excluded.name,
+             picture_url = excluded.picture_url,
+             updated_at = excluded.updated_at`,
+        )
+        .bind(input.id, input.email, input.name, input.pictureUrl, now)
+        .run();
+    }
     const row = await this.db.prepare(`SELECT * FROM users WHERE id = ?1`).bind(input.id).first();
     return rowToUser(row!);
+  }
+
+  async saveGoogleRefreshToken(userId: string, refreshToken: string | null): Promise<void> {
+    const now = isoNow();
+    await this.db
+      .prepare(`UPDATE users SET google_refresh_token = ?1, updated_at = ?2 WHERE id = ?3`)
+      .bind(refreshToken, now, userId)
+      .run();
   }
 
   async createList(userId: string, input: CreateListInput): Promise<List> {
