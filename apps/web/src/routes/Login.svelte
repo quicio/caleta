@@ -9,7 +9,7 @@
     <header class="space-y-4">
       <Wordmark size="lg" />
       <div>
-        <p class="text-sm text-mist">Una caleta de cosas por hacer.</p>
+        <p class="text-sm text-mist">Caleta de cosas por hacer.</p>
         <p class="mt-1 text-xs font-mono text-mist/50">
           Minimalista. Rápida. Hecha para el caos.
         </p>
