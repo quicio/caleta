@@ -28,6 +28,7 @@ app.use("*", async (c, next) => {
     c.res.headers.set("Vary", "Origin");
     c.res.headers.set("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
     c.res.headers.set("Access-Control-Allow-Headers", "authorization, content-type");
+    c.res.headers.set("Access-Control-Allow-Credentials", "true");
   }
   if (c.req.method === "OPTIONS") return c.body(null, 204);
   await next();
