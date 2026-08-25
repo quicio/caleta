@@ -46,7 +46,11 @@ export function buildAuthRedirectUrl(
   // aceptable para uso personal.
   u.searchParams.set("access_type", "offline");
   u.searchParams.set("include_granted_scopes", "true");
-  u.searchParams.set("prompt", "consent");
+  // Sin prompt: Google muestra consent solo en el primer login (cuando no
+  // hay scopes otorgados); en logins siguientes, con sesión activa y scopes
+  // ya concedidos, redirige sin pedir nada. Si el refresh_token almacenado
+  // perdiera el scope de Calendar, el endpoint /api/calendar/events
+  // responde 403 y el front muestra el CTA de reconectar.
   u.searchParams.set("state", state);
   return u.toString();
 }
