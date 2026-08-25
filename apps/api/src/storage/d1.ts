@@ -5,13 +5,22 @@
 // aislamiento (defensa en profundidad, incluso si la ruta lo chequea).
 
 import type {
+  CreateGoalInput,
   CreateListInput,
+  CreateRhythmEntryInput,
+  CreateRhythmInput,
   CreateTaskInput,
+  Goal,
   List,
+  Rhythm,
+  RhythmEntry,
   StorageProvider,
   SyncSnapshot,
   Task,
+  TaskBucket,
+  UpdateGoalPatch,
   UpdateListPatch,
+  UpdateRhythmPatch,
   UpdateTaskPatch,
   User,
   UserSettings,
@@ -46,12 +55,14 @@ function rowToList(row: Record<string, unknown>): List {
     userId: row.user_id as string,
     name: row.name as string,
     deletedAt: (row.deleted_at as string) ?? null,
+    goalId: (row.goal_id as string) ?? null,
     createdAt: isoDate(row.created_at as string),
     updatedAt: isoDate(row.updated_at as string),
   };
 }
 
 function rowToTask(row: Record<string, unknown>): Task {
+  const bucket = (row.bucket as string) ?? "next";
   return {
     id: row.id as string,
     listId: row.list_id as string,
@@ -63,8 +74,47 @@ function rowToTask(row: Record<string, unknown>): Task {
     deletedAt: (row.deleted_at as string) ?? null,
     dependsOn: (row.depends_on as string) ?? null,
     priority: ((row.priority as string) ?? "normal") === "high" ? "high" : "normal",
+    bucket: bucket === "now" || bucket === "someday" ? bucket : "next",
     createdAt: isoDate(row.created_at as string),
     updatedAt: isoDate(row.updated_at as string),
+  };
+}
+
+function rowToGoal(row: Record<string, unknown>): Goal {
+  const status = (row.status as string) ?? "active";
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    title: row.title as string,
+    description: (row.description as string) ?? null,
+    status: status === "done" || status === "abandoned" ? status : "active",
+    createdAt: isoDate(row.created_at as string),
+    updatedAt: isoDate(row.updated_at as string),
+  };
+}
+
+function rowToRhythm(row: Record<string, unknown>): Rhythm {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    title: row.title as string,
+    targetPerWeek: Number(row.target_per_week ?? 3),
+    minimum: (row.minimum as string) ?? null,
+    unit: (row.unit as string) ?? null,
+    createdAt: isoDate(row.created_at as string),
+    updatedAt: isoDate(row.updated_at as string),
+  };
+}
+
+function rowToRhythmEntry(row: Record<string, unknown>): RhythmEntry {
+  const kind = (row.kind as string) ?? "full";
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    rhythmId: row.rhythm_id as string,
+    date: row.date as string,
+    kind: kind === "minimum" || kind === "missed" ? kind : "full",
+    createdAt: isoDate(row.created_at as string),
   };
 }
 
@@ -227,6 +277,10 @@ export class D1Provider implements StorageProvider {
       sets.push(`deleted_at = ?${i++}`);
       values.push(patch.deletedAt);
     }
+    if (patch.goalId !== undefined) {
+      sets.push(`goal_id = ?${i++}`);
+      values.push(patch.goalId);
+    }
     if (sets.length === 0) return this.getList(userId, listId);
     sets.push(`updated_at = ?${i++}`);
     values.push(now);
@@ -265,11 +319,12 @@ export class D1Provider implements StorageProvider {
     const now = isoNow();
     const id = input.id ?? generateId();
     const createdAt = input.createdAt ?? now;
+    const bucket = input.bucket ?? "next";
     await this.db
       .prepare(
         `INSERT INTO tasks
-           (id, list_id, user_id, title, description, due_at, completed, deleted_at, depends_on, priority, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`,
+           (id, list_id, user_id, title, description, due_at, completed, deleted_at, depends_on, priority, bucket, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)`,
       )
       .bind(
         id,
@@ -282,6 +337,7 @@ export class D1Provider implements StorageProvider {
         input.deletedAt ?? null,
         (input as { dependsOn?: string | null }).dependsOn ?? null,
         ((input as { priority?: string }).priority ?? "normal") === "high" ? "high" : "normal",
+        bucket,
         createdAt,
         now,
       )
@@ -369,6 +425,10 @@ export class D1Provider implements StorageProvider {
       sets.push(`list_id = ?${i++}`);
       values.push(patch.listId);
     }
+    if (patch.bucket !== undefined) {
+      sets.push(`bucket = ?${i++}`);
+      values.push(patch.bucket);
+    }
     if (sets.length === 0) return this.getTask(userId, taskId);
     sets.push(`updated_at = ?${i++}`);
     values.push(now);
@@ -420,16 +480,63 @@ export class D1Provider implements StorageProvider {
            WHERE user_id = ?1 AND deleted_at IS NULL
            ORDER BY updated_at ASC`,
         );
-    const [listsRes, tasksRes] = await Promise.all([
+    const goalsStmt = useSince
+      ? this.db.prepare(
+          `SELECT * FROM goals
+           WHERE user_id = ?1 AND updated_at > ?2
+           ORDER BY updated_at ASC`,
+        )
+      : this.db.prepare(
+          `SELECT * FROM goals WHERE user_id = ?1 ORDER BY updated_at ASC`,
+        );
+    const rhythmsStmt = useSince
+      ? this.db.prepare(
+          `SELECT * FROM rhythms
+           WHERE user_id = ?1 AND updated_at > ?2
+           ORDER BY updated_at ASC`,
+        )
+      : this.db.prepare(
+          `SELECT * FROM rhythms WHERE user_id = ?1 ORDER BY updated_at ASC`,
+        );
+    const entriesStmt = useSince
+      ? this.db.prepare(
+          `SELECT * FROM rhythm_entries
+           WHERE user_id = ?1 AND created_at > ?2
+           ORDER BY created_at ASC`,
+        )
+      : this.db.prepare(
+          `SELECT * FROM rhythm_entries WHERE user_id = ?1 ORDER BY created_at ASC`,
+        );
+    const [listsRes, tasksRes, goalsRes, rhythmsRes, entriesRes] = await Promise.all([
       useSince ? listsStmt.bind(userId, since).all() : listsStmt.bind(userId).all(),
       useSince ? tasksStmt.bind(userId, since).all() : tasksStmt.bind(userId).all(),
+      useSince ? goalsStmt.bind(userId, since).all() : goalsStmt.bind(userId).all(),
+      useSince ? rhythmsStmt.bind(userId, since).all() : rhythmsStmt.bind(userId).all(),
+      useSince ? entriesStmt.bind(userId, since).all() : entriesStmt.bind(userId).all(),
     ]);
     const lists = ((listsRes.results ?? []) as unknown as Record<string, unknown>[]).map(rowToList);
     const tasks = ((tasksRes.results ?? []) as unknown as Record<string, unknown>[]).map(rowToTask);
+    const goals = ((goalsRes.results ?? []) as unknown as Record<string, unknown>[]).map(rowToGoal);
+    const rhythms = ((rhythmsRes.results ?? []) as unknown as Record<string, unknown>[]).map(
+      rowToRhythm,
+    );
+    const rhythmEntries = ((entriesRes.results ?? []) as unknown as Record<string, unknown>[]).map(
+      rowToRhythmEntry,
+    );
     let max = since ?? "";
     for (const l of lists) if (l.updatedAt > max) max = l.updatedAt;
     for (const t of tasks) if (t.updatedAt > max) max = t.updatedAt;
-    return { lists, tasks, watermark: max || now() };
+    for (const g of goals) if (g.updatedAt > max) max = g.updatedAt;
+    for (const r of rhythms) if (r.updatedAt > max) max = r.updatedAt;
+    for (const e of rhythmEntries) if (e.createdAt > max) max = e.createdAt;
+    return {
+      lists,
+      tasks,
+      goals,
+      rhythms,
+      rhythmEntries,
+      watermark: max || now(),
+    };
   }
 
   async pushTasks(
@@ -465,11 +572,12 @@ export class D1Provider implements StorageProvider {
       const now = nowFn();
       const id = t.id ?? generateId();
       const createdAt = t.createdAt ?? now;
+      const bucket = t.bucket ?? "next";
       await this.db
         .prepare(
           `INSERT INTO tasks
-             (id, list_id, user_id, title, description, due_at, completed, deleted_at, depends_on, priority, created_at, updated_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+             (id, list_id, user_id, title, description, due_at, completed, deleted_at, depends_on, priority, bucket, created_at, updated_at)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
            ON CONFLICT(id) DO UPDATE SET
              title = excluded.title,
              description = excluded.description,
@@ -478,6 +586,7 @@ export class D1Provider implements StorageProvider {
              deleted_at = excluded.deleted_at,
              depends_on = excluded.depends_on,
              priority = excluded.priority,
+             bucket = excluded.bucket,
              updated_at = excluded.updated_at`,
         )
         .bind(
@@ -491,6 +600,7 @@ export class D1Provider implements StorageProvider {
           t.deletedAt ?? null,
           (t as { dependsOn?: string | null }).dependsOn ?? null,
           ((t as { priority?: string }).priority ?? "normal") === "high" ? "high" : "normal",
+          bucket,
           createdAt,
           now,
         )
@@ -502,5 +612,262 @@ export class D1Provider implements StorageProvider {
       applied.push(rowToTask(row!));
     }
     return { ok: invalid.length === 0, applied, invalid };
+  }
+
+  // --- goals ---
+
+  async createGoal(userId: string, input: CreateGoalInput): Promise<Goal> {
+    const now = isoNow();
+    const id = input.id ?? generateId();
+    const createdAt = input.createdAt ?? now;
+    await this.db
+      .prepare(
+        `INSERT INTO goals (id, user_id, title, description, status, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+      )
+      .bind(
+        id,
+        userId,
+        input.title,
+        input.description ?? null,
+        input.status ?? "active",
+        createdAt,
+        now,
+      )
+      .run();
+    const row = await this.db
+      .prepare(`SELECT * FROM goals WHERE id = ?1 AND user_id = ?2`)
+      .bind(id, userId)
+      .first();
+    return rowToGoal(row!);
+  }
+
+  async getGoal(userId: string, goalId: string): Promise<Goal | null> {
+    const row = await this.db
+      .prepare(`SELECT * FROM goals WHERE id = ?1 AND user_id = ?2`)
+      .bind(goalId, userId)
+      .first();
+    return row ? rowToGoal(row) : null;
+  }
+
+  async listGoals(userId: string, since?: string): Promise<Goal[]> {
+    const stmt = since
+      ? this.db.prepare(
+          `SELECT * FROM goals WHERE user_id = ?1 AND updated_at > ?2 ORDER BY updated_at ASC`,
+        ).bind(userId, since)
+      : this.db.prepare(
+          `SELECT * FROM goals WHERE user_id = ?1 ORDER BY updated_at ASC`,
+        ).bind(userId);
+    const result = await stmt.all();
+    return ((result.results ?? []) as unknown as Record<string, unknown>[]).map(rowToGoal);
+  }
+
+  async updateGoal(
+    userId: string,
+    goalId: string,
+    patch: UpdateGoalPatch,
+  ): Promise<Goal | null> {
+    const now = isoNow();
+    const sets: string[] = [];
+    const values: (string | null)[] = [];
+    let i = 1;
+    if (patch.title !== undefined) {
+      sets.push(`title = ?${i++}`);
+      values.push(patch.title);
+    }
+    if (patch.description !== undefined) {
+      sets.push(`description = ?${i++}`);
+      values.push(patch.description);
+    }
+    if (patch.status !== undefined) {
+      sets.push(`status = ?${i++}`);
+      values.push(patch.status);
+    }
+    if (sets.length === 0) return this.getGoal(userId, goalId);
+    sets.push(`updated_at = ?${i++}`);
+    values.push(now);
+    values.push(goalId, userId);
+    await this.db
+      .prepare(`UPDATE goals SET ${sets.join(", ")} WHERE id = ?${i++} AND user_id = ?${i++}`)
+      .bind(...values)
+      .run();
+    return this.getGoal(userId, goalId);
+  }
+
+  async deleteGoal(userId: string, goalId: string): Promise<boolean> {
+    // Limpia goal_id de los proyectos asociados; no los elimina.
+    await this.db
+      .prepare(`UPDATE lists SET goal_id = NULL, updated_at = ?1 WHERE goal_id = ?2 AND user_id = ?3`)
+      .bind(isoNow(), goalId, userId)
+      .run();
+    const result = await this.db
+      .prepare(`DELETE FROM goals WHERE id = ?1 AND user_id = ?2`)
+      .bind(goalId, userId)
+      .run();
+    return (result.meta?.changes ?? 0) > 0;
+  }
+
+  // --- rhythms ---
+
+  async createRhythm(userId: string, input: CreateRhythmInput): Promise<Rhythm> {
+    const now = isoNow();
+    const id = input.id ?? generateId();
+    const createdAt = input.createdAt ?? now;
+    await this.db
+      .prepare(
+        `INSERT INTO rhythms (id, user_id, title, target_per_week, minimum, unit, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
+      )
+      .bind(
+        id,
+        userId,
+        input.title,
+        input.targetPerWeek ?? 3,
+        input.minimum ?? null,
+        input.unit ?? null,
+        createdAt,
+        now,
+      )
+      .run();
+    const row = await this.db
+      .prepare(`SELECT * FROM rhythms WHERE id = ?1 AND user_id = ?2`)
+      .bind(id, userId)
+      .first();
+    return rowToRhythm(row!);
+  }
+
+  async getRhythm(userId: string, rhythmId: string): Promise<Rhythm | null> {
+    const row = await this.db
+      .prepare(`SELECT * FROM rhythms WHERE id = ?1 AND user_id = ?2`)
+      .bind(rhythmId, userId)
+      .first();
+    return row ? rowToRhythm(row) : null;
+  }
+
+  async listRhythms(userId: string, since?: string): Promise<Rhythm[]> {
+    const stmt = since
+      ? this.db.prepare(
+          `SELECT * FROM rhythms WHERE user_id = ?1 AND updated_at > ?2 ORDER BY updated_at ASC`,
+        ).bind(userId, since)
+      : this.db.prepare(
+          `SELECT * FROM rhythms WHERE user_id = ?1 ORDER BY updated_at ASC`,
+        ).bind(userId);
+    const result = await stmt.all();
+    return ((result.results ?? []) as unknown as Record<string, unknown>[]).map(rowToRhythm);
+  }
+
+  async updateRhythm(
+    userId: string,
+    rhythmId: string,
+    patch: UpdateRhythmPatch,
+  ): Promise<Rhythm | null> {
+    const now = isoNow();
+    const sets: string[] = [];
+    const values: (string | number | null)[] = [];
+    let i = 1;
+    if (patch.title !== undefined) {
+      sets.push(`title = ?${i++}`);
+      values.push(patch.title);
+    }
+    if (patch.targetPerWeek !== undefined) {
+      sets.push(`target_per_week = ?${i++}`);
+      values.push(patch.targetPerWeek);
+    }
+    if (patch.minimum !== undefined) {
+      sets.push(`minimum = ?${i++}`);
+      values.push(patch.minimum);
+    }
+    if (patch.unit !== undefined) {
+      sets.push(`unit = ?${i++}`);
+      values.push(patch.unit);
+    }
+    if (sets.length === 0) return this.getRhythm(userId, rhythmId);
+    sets.push(`updated_at = ?${i++}`);
+    values.push(now);
+    values.push(rhythmId, userId);
+    await this.db
+      .prepare(`UPDATE rhythms SET ${sets.join(", ")} WHERE id = ?${i++} AND user_id = ?${i++}`)
+      .bind(...values)
+      .run();
+    return this.getRhythm(userId, rhythmId);
+  }
+
+  async deleteRhythm(userId: string, rhythmId: string): Promise<boolean> {
+    const result = await this.db
+      .prepare(`DELETE FROM rhythms WHERE id = ?1 AND user_id = ?2`)
+      .bind(rhythmId, userId)
+      .run();
+    return (result.meta?.changes ?? 0) > 0;
+  }
+
+  async listRhythmEntries(
+    userId: string,
+    rhythmId: string,
+    since?: string,
+  ): Promise<RhythmEntry[]> {
+    const stmt = since
+      ? this.db
+          .prepare(
+            `SELECT * FROM rhythm_entries
+             WHERE user_id = ?1 AND rhythm_id = ?2 AND created_at > ?3
+             ORDER BY date ASC`,
+          )
+          .bind(userId, rhythmId, since)
+      : this.db
+          .prepare(
+            `SELECT * FROM rhythm_entries WHERE user_id = ?1 AND rhythm_id = ?2 ORDER BY date ASC`,
+          )
+          .bind(userId, rhythmId);
+    const result = await stmt.all();
+    return ((result.results ?? []) as unknown as Record<string, unknown>[]).map(rowToRhythmEntry);
+  }
+
+  async upsertRhythmEntry(userId: string, input: CreateRhythmEntryInput): Promise<RhythmEntry> {
+    const now = isoNow();
+    const id = input.id ?? generateId();
+    await this.db
+      .prepare(
+        `INSERT INTO rhythm_entries (id, user_id, rhythm_id, date, kind, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(user_id, rhythm_id, date) DO UPDATE SET
+           kind = excluded.kind,
+           id = excluded.id,
+           created_at = excluded.created_at`,
+      )
+      .bind(id, userId, input.rhythmId, input.date, input.kind, now)
+      .run();
+    const row = await this.db
+      .prepare(
+        `SELECT * FROM rhythm_entries WHERE user_id = ?1 AND rhythm_id = ?2 AND date = ?3`,
+      )
+      .bind(userId, input.rhythmId, input.date)
+      .first();
+    return rowToRhythmEntry(row!);
+  }
+
+  // --- tasks by bucket ---
+
+  async listTasksByBucket(
+    userId: string,
+    bucket: TaskBucket,
+    since?: string,
+  ): Promise<Task[]> {
+    const stmt = since
+      ? this.db
+          .prepare(
+            `SELECT * FROM tasks
+             WHERE user_id = ?1 AND bucket = ?2 AND deleted_at IS NULL AND completed = 0 AND updated_at > ?3
+             ORDER BY updated_at ASC`,
+          )
+          .bind(userId, bucket, since)
+      : this.db
+          .prepare(
+            `SELECT * FROM tasks
+             WHERE user_id = ?1 AND bucket = ?2 AND deleted_at IS NULL AND completed = 0
+             ORDER BY updated_at ASC`,
+          )
+          .bind(userId, bucket);
+    const result = await stmt.all();
+    return ((result.results ?? []) as unknown as Record<string, unknown>[]).map(rowToTask);
   }
 }

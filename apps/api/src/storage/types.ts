@@ -16,9 +16,12 @@ export interface List {
   userId: string;
   name: string;
   deletedAt: string | null;
+  goalId: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export type TaskBucket = "now" | "next" | "someday";
 
 export interface Task {
   id: string;
@@ -31,8 +34,41 @@ export interface Task {
   deletedAt: string | null;
   dependsOn: string | null;
   priority: "normal" | "high";
+  bucket: TaskBucket;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Goal {
+  id: string;
+  userId: string;
+  title: string;
+  description: string | null;
+  status: "active" | "done" | "abandoned";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Rhythm {
+  id: string;
+  userId: string;
+  title: string;
+  targetPerWeek: number;
+  minimum: string | null;
+  unit: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RhythmEntryKind = "full" | "minimum" | "missed";
+
+export interface RhythmEntry {
+  id: string;
+  userId: string;
+  rhythmId: string;
+  date: string; // YYYY-MM-DD local
+  kind: RhythmEntryKind;
+  createdAt: string;
 }
 
 /**
@@ -54,11 +90,13 @@ export interface CreateTaskInput {
   completed?: boolean;
   deletedAt?: string | null;
   createdAt?: string;
+  bucket?: TaskBucket;
 }
 
 export interface UpdateListPatch {
   name?: string;
   deletedAt?: string | null;
+  goalId?: string | null;
 }
 export interface UpdateTaskPatch {
   title?: string;
@@ -69,6 +107,41 @@ export interface UpdateTaskPatch {
   dependsOn?: string | null;
   priority?: "normal" | "high";
   listId?: string;
+  bucket?: TaskBucket;
+}
+
+export interface CreateGoalInput {
+  id?: string;
+  title: string;
+  description?: string | null;
+  status?: "active" | "done" | "abandoned";
+  createdAt?: string;
+}
+export interface UpdateGoalPatch {
+  title?: string;
+  description?: string | null;
+  status?: "active" | "done" | "abandoned";
+}
+export interface CreateRhythmInput {
+  id?: string;
+  title: string;
+  targetPerWeek?: number;
+  minimum?: string | null;
+  unit?: string | null;
+  createdAt?: string;
+}
+export interface UpdateRhythmPatch {
+  title?: string;
+  targetPerWeek?: number;
+  minimum?: string | null;
+  unit?: string | null;
+}
+export interface CreateRhythmEntryInput {
+  id?: string;
+  rhythmId: string;
+  date: string; // YYYY-MM-DD
+  kind: RhythmEntryKind;
+  createdAt?: string;
 }
 
 // Settings genéricos por usuario: un JSON object plano de key->valor.
@@ -79,6 +152,9 @@ export type UserSettings = Record<string, unknown>;
 export interface SyncSnapshot {
   lists: List[];
   tasks: Task[];
+  goals: Goal[];
+  rhythms: Rhythm[];
+  rhythmEntries: RhythmEntry[];
   watermark: string; // mayor updatedAt observado
 }
 
@@ -133,4 +209,24 @@ export interface StorageProvider {
     tasks: CreateTaskInput[],
     now: () => string,
   ): Promise<{ ok: boolean; applied: Task[]; invalid: { task: CreateTaskInput; reason: string }[] }>;
+
+  // --- goals ---
+  createGoal(userId: string, input: CreateGoalInput): Promise<Goal>;
+  getGoal(userId: string, goalId: string): Promise<Goal | null>;
+  listGoals(userId: string, since?: string): Promise<Goal[]>;
+  updateGoal(userId: string, goalId: string, patch: UpdateGoalPatch): Promise<Goal | null>;
+  deleteGoal(userId: string, goalId: string): Promise<boolean>;
+
+  // --- rhythms ---
+  createRhythm(userId: string, input: CreateRhythmInput): Promise<Rhythm>;
+  getRhythm(userId: string, rhythmId: string): Promise<Rhythm | null>;
+  listRhythms(userId: string, since?: string): Promise<Rhythm[]>;
+  updateRhythm(userId: string, rhythmId: string, patch: UpdateRhythmPatch): Promise<Rhythm | null>;
+  deleteRhythm(userId: string, rhythmId: string): Promise<boolean>;
+
+  listRhythmEntries(userId: string, rhythmId: string, since?: string): Promise<RhythmEntry[]>;
+  upsertRhythmEntry(userId: string, input: CreateRhythmEntryInput): Promise<RhythmEntry>;
+
+  // --- tasks (bucket) ---
+  listTasksByBucket(userId: string, bucket: TaskBucket, since?: string): Promise<Task[]>;
 }

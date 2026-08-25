@@ -41,8 +41,11 @@ listRoutes.get("/api/lists/:id", async (c) => {
 });
 
 listRoutes.patch("/api/lists/:id", async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as { name?: string };
-  let name: string | undefined;
+  const body = (await c.req.json().catch(() => ({}))) as {
+    name?: string;
+    goal_id?: string | null;
+  };
+  const patch: { name?: string; goalId?: string | null } = {};
   if (body.name !== undefined) {
     const trimmed = body.name.trim();
     if (trimmed.length === 0) {
@@ -51,10 +54,22 @@ listRoutes.patch("/api/lists/:id", async (c) => {
     if (trimmed.length > 120) {
       return c.json({ error: "name demasiado largo (máx 120)" }, 400);
     }
-    name = trimmed;
+    patch.name = trimmed;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "goal_id")) {
+    if (body.goal_id === null) {
+      patch.goalId = null;
+    } else if (typeof body.goal_id === "string" && body.goal_id.length > 0) {
+      const provider = getStorageProvider(c.env);
+      const goal = await provider.getGoal(c.get("user").sub, body.goal_id);
+      if (!goal) return c.json({ error: "goal no pertenece al usuario" }, 400);
+      patch.goalId = body.goal_id;
+    } else {
+      return c.json({ error: "goal_id inválido" }, 400);
+    }
   }
   const provider = getStorageProvider(c.env);
-  const updated = await provider.updateList(c.get("user").sub, c.req.param("id"), { name });
+  const updated = await provider.updateList(c.get("user").sub, c.req.param("id"), patch);
   return updated ? c.json(updated) : c.json({ error: "not found" }, 404);
 });
 

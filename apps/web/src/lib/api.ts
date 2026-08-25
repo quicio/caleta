@@ -2,7 +2,15 @@
 // httpOnly — la SPA no toca tokens. El server hace sliding refresh vía
 // Set-Cookie cuando el access expira pronto.
 
-import type { ApiList, ApiTask, SyncPull } from "./types.ts";
+import type {
+  ApiGoal,
+  ApiList,
+  ApiRhythm,
+  ApiRhythmEntry,
+  ApiTask,
+  SyncPull,
+  TaskBucket,
+} from "./types.ts";
 
 const API_BASE: string = ((import.meta.env.VITE_API_URL as string | undefined) ?? "") || "";
 
@@ -57,6 +65,9 @@ export const api = {
   deleteList(id: string): Promise<void> {
     return call({ method: "DELETE", path: `/api/lists/${id}` });
   },
+  patchList(id: string, patch: { name?: string; goal_id?: string | null }): Promise<ApiList> {
+    return call({ method: "PATCH", path: `/api/lists/${id}`, body: patch });
+  },
   listTasks(listId: string): Promise<{ tasks: ApiTask[] }> {
     return call({ method: "GET", path: `/api/lists/${listId}/tasks` });
   },
@@ -73,6 +84,7 @@ export const api = {
       depends_on?: string | null;
       priority?: "normal" | "high";
       list_id?: string;
+      bucket?: TaskBucket;
     },
   ): Promise<ApiTask> {
     return call({ method: "PATCH", path: `/api/tasks/${id}`, body: patch });
@@ -121,5 +133,35 @@ export const api = {
     settings: { selectedCalendars?: string[] };
   }> {
     return call({ method: "PUT", path: "/api/settings", body: { settings } });
+  },
+  listGoals(): Promise<{ goals: ApiGoal[] }> {
+    return call({ method: "GET", path: "/api/goals" });
+  },
+  createGoal(input: { title: string; description?: string | null }): Promise<ApiGoal> {
+    return call({ method: "POST", path: "/api/goals", body: input });
+  },
+  patchGoal(id: string, patch: { title?: string; description?: string | null; status?: "active" | "done" | "abandoned" }): Promise<ApiGoal> {
+    return call({ method: "PATCH", path: `/api/goals/${id}`, body: patch });
+  },
+  deleteGoal(id: string): Promise<void> {
+    return call({ method: "DELETE", path: `/api/goals/${id}` });
+  },
+  listRhythms(): Promise<{ rhythms: ApiRhythm[] }> {
+    return call({ method: "GET", path: "/api/rhythms" });
+  },
+  createRhythm(input: { title: string; targetPerWeek?: number; minimum?: string | null; unit?: string | null }): Promise<ApiRhythm> {
+    return call({ method: "POST", path: "/api/rhythms", body: input });
+  },
+  patchRhythm(id: string, patch: { title?: string; targetPerWeek?: number; minimum?: string | null; unit?: string | null }): Promise<ApiRhythm> {
+    return call({ method: "PATCH", path: `/api/rhythms/${id}`, body: patch });
+  },
+  deleteRhythm(id: string): Promise<void> {
+    return call({ method: "DELETE", path: `/api/rhythms/${id}` });
+  },
+  listRhythmEntries(rhythmId: string): Promise<{ entries: ApiRhythmEntry[] }> {
+    return call({ method: "GET", path: `/api/rhythms/${rhythmId}/entries` });
+  },
+  logRhythmEntry(rhythmId: string, date: string, kind: "full" | "minimum" | "missed"): Promise<ApiRhythmEntry> {
+    return call({ method: "POST", path: `/api/rhythms/${rhythmId}/entries`, body: { date, kind } });
   },
 };
