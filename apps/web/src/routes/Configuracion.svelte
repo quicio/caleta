@@ -44,6 +44,8 @@
       saving = false;
     }
   }
+
+  onMount(load);
 </script>
 
 <main class="mx-auto w-full max-w-3xl flex-1 px-4 pb-24 pt-7 lg:px-8 lg:pb-10 lg:pt-10">
