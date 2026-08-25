@@ -67,6 +67,7 @@ taskRoutes.patch("/api/tasks/:id", async (c) => {
     dependsOn?: string | null;
     priority?: "normal" | "high";
     listId?: string;
+    bucket?: "now" | "next" | "someday";
   } = {};
   if (typeof body.title === "string") {
     const trimmed = body.title.trim();
@@ -99,6 +100,9 @@ taskRoutes.patch("/api/tasks/:id", async (c) => {
     const owned = await provider.getList(c.get("user").sub, body.list_id);
     if (!owned) return c.json({ error: "list_id no pertenece al usuario" }, 400);
     patch.listId = body.list_id;
+  }
+  if (body.bucket === "now" || body.bucket === "next" || body.bucket === "someday") {
+    patch.bucket = body.bucket;
   }
   const provider = getStorageProvider(c.env);
   const updated = await provider.updateTask(c.get("user").sub, c.req.param("id"), patch);

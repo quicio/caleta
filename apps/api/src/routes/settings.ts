@@ -7,7 +7,7 @@
 // PUT  /api/settings -> { settings } (merge por patch del JSON persistido).
 
 import { Hono } from "hono";
-import { authedUser, requireAuth, type AuthEnv } from "../middleware/auth.ts";
+import { requireAuth, type AuthEnv } from "../middleware/auth.ts";
 import { getStorageProvider } from "../storage/index.ts";
 import { refreshAccessToken, type GoogleEnv } from "../auth/google.ts";
 import { log } from "../lib/log.ts";
@@ -44,7 +44,7 @@ async function listCalendars(
 }
 
 settingsRoutes.get("/api/settings", async (c) => {
-  const user = authedUser(c);
+  const user = c.get("user") as { sub: string; email: string };
   const provider = getStorageProvider(c.env);
   const settings = await provider.getSettings(user.sub);
 
@@ -70,7 +70,7 @@ settingsRoutes.get("/api/settings", async (c) => {
 });
 
 settingsRoutes.put("/api/settings", async (c) => {
-  const user = authedUser(c);
+  const user = c.get("user") as { sub: string; email: string };
   const body = (await c.req.json().catch(() => ({}))) as { settings?: Record<string, unknown> };
   const patch = body.settings;
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
